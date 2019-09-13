@@ -4,14 +4,16 @@
 #define MOTORS_WEG_CVW300_TASK_TASK_HPP
 
 #include "motors_weg_cvw300/TaskBase.hpp"
+#include <base/commands/Joints.hpp>
 
 namespace motors_weg_cvw300{
+    class Driver;
 
     /*! \class Task
      * \brief The task context provides and requires services. It uses an ExecutionEngine to perform its functions.
      * Essential interfaces are operations, data flow ports and properties. These interfaces have been defined using the oroGen specification.
      * In order to modify the interfaces you should (re)use oroGen and rely on the associated workflow.
-     * 
+     *
      * \details
      * The name of a TaskContext is primarily defined via:
      \verbatim
@@ -25,8 +27,11 @@ namespace motors_weg_cvw300{
     {
 	friend class TaskBase;
     protected:
+        base::commands::Joints m_cmd_in;
+        base::samples::Joints m_sample;
+        base::Time m_last_temperature_update;
 
-
+        Driver* m_driver;
 
     public:
         /** TaskContext constructor for Task
@@ -77,6 +82,8 @@ namespace motors_weg_cvw300{
          * it again. Finally, FatalError cannot be recovered.
          */
         void updateHook();
+
+        void processIO();
 
         /** This hook is called by Orocos when the component is in the
          * RunTimeError state, at each activity step. See the discussion in
