@@ -1,0 +1,34 @@
+name 'motors_weg_cvw300'
+
+import_types_from 'std'
+import_types_from 'base'
+
+using_library 'motors_weg_cvw300'
+import_types_from 'motors_weg_cvw300/Configuration.hpp'
+import_types_from 'motors_weg_cvw300/InverterTemperatures.hpp'
+
+using_task_library 'iodrivers_base'
+
+task_context 'Task', subclasses: 'iodrivers_base::Task' do
+    needs_configuration
+
+    # Acceleration and deceleration ramps
+    property 'ramps', '/motors_weg_cvw300/configuration/Ramps'
+
+    # How the motor is being controlled
+    property 'control_method',
+             '/motors_weg_cvw300/configuration/ControlType', :CONTROL_ENCODER
+
+    # Settings applicable for vectorial (encoder or sensorless) method
+    property 'vectorial_settings',
+             '/motors_weg_cvw300/configuration/VectorialControlSettings'
+
+    # Limits
+    property 'limits', '/base/JointLimits'
+
+    # Commands
+    input_port 'cmd_in', '/base/commands/Joints'
+
+    # Feedback
+    output_port 'joint_samples', '/base/samples/Joints'
+end

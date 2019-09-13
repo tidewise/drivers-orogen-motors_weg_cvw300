@@ -1,0 +1,11 @@
+<package>
+  <description brief="oroGen integration of the WEG CVW300 controller driver">
+  </description>
+
+  <author>Sylvain Joyeux/sylvain.joyeux@tidewise.io</author>
+  <license>BSD 3-clause</license>
+
+  <depend package="drivers/motors_weg_cvw300" />
+  <depend package="base/orogen/types" />
+  <depend package="drivers/orogen/iodrivers_base" />
+</package>
