@@ -99,6 +99,7 @@ void Task::updateHook()
 
     if (now - m_last_temperature_update > _temperature_period.get()) {
         _temperatures.write(m_driver->readTemperatures());
+        m_last_temperature_update = now;
     }
 
     TaskBase::updateHook();
