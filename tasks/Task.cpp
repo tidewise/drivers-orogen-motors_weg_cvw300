@@ -29,11 +29,10 @@ bool Task::configureHook()
     // You MUST call guard.commit() once the driver is fully
     // functional (usually before the configureHook's "return true;"
     iodrivers_base::ConfigureGuard guard(this);
-    Driver* driver = new Driver(_address.get());
+    unique_ptr<Driver> driver(new Driver(_address.get()));
     if (!_io_port.get().empty())
         driver->openURI(_io_port.get());
-    setDriver(driver);
-    m_driver = driver;
+    setDriver(driver.get());
 
     // This is MANDATORY and MUST be called after the setDriver but before you do
     // anything with the driver
@@ -54,6 +53,7 @@ bool Task::configureHook()
     m_cmd_in.elements.resize(1);
     m_sample.elements.resize(1);
 
+    m_driver = move(driver);
     guard.commit();
     return true;
 }
@@ -115,4 +115,7 @@ void Task::stopHook()
 void Task::cleanupHook()
 {
     TaskBase::cleanupHook();
+    // Delete the driver AFTER calling TaskBase::configureHook, as the latter
+    // detaches the driver from the oroGen I/O
+    m_driver.release();
 }

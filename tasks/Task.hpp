@@ -31,7 +31,7 @@ namespace motors_weg_cvw300{
         base::samples::Joints m_sample;
         base::Time m_last_temperature_update;
 
-        Driver* m_driver;
+        std::unique_ptr<Driver> m_driver;
 
     public:
         /** TaskContext constructor for Task
