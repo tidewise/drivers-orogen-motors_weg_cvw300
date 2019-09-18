@@ -21,7 +21,7 @@ task_context 'Task', subclasses: 'iodrivers_base::Task' do
     property 'temperature_period', '/base/Time'
 
     # Configure the internal watchdog
-    property 'watchdog', '/motors_weg_cvw300/SerialWatchdog'
+    property 'watchdog', '/motors_weg_cvw300/configuration/SerialWatchdog'
 
     # Acceleration and deceleration ramps
     property 'ramps', '/motors_weg_cvw300/configuration/Ramps'

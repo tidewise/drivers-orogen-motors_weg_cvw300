@@ -6,11 +6,13 @@
 #include <motors_weg_cvw300/InverterStatus.hpp>
 
 namespace motors_weg_cvw300 {
-    struct SerialWatchdog {
-        base::Time timeout = base::Time::fromSeconds(1);
-        configuration::CommunicationErrorAction action =
-            configuration::STOP_WITH_RAMP;
-    };
+    namespace configuration {
+        struct SerialWatchdog {
+            base::Time timeout = base::Time::fromSeconds(1);
+            configuration::CommunicationErrorAction action =
+                configuration::STOP_WITH_RAMP;
+        };
+    }
 
     struct InverterState {
         base::Time time;

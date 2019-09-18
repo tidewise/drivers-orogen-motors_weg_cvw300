@@ -41,7 +41,7 @@ bool Task::configureHook()
 
     driver->readMotorParameters();
     driver->disable();
-    SerialWatchdog wd = _watchdog.get();
+    auto wd = _watchdog.get();
     driver->writeSerialWatchdog(wd.timeout, wd.action);
     driver->writeControlType(_control_type.get());
 
