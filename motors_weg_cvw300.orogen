@@ -7,28 +7,42 @@ using_library 'motors_weg_cvw300'
 import_types_from 'motors_weg_cvw300/Configuration.hpp'
 import_types_from 'motors_weg_cvw300/InverterTemperatures.hpp'
 
+import_types_from 'motors_weg_cvw300Types.hpp'
+
 using_task_library 'iodrivers_base'
 
 task_context 'Task', subclasses: 'iodrivers_base::Task' do
     needs_configuration
 
+    # The device address on the RS485 bus
+    property 'address', 'int', 1
+
+    # Update period for the temperature output
+    property 'temperature_period', '/base/Time'
+
+    # Configure the internal watchdog
+    property 'watchdog', '/motors_weg_cvw300/configuration/SerialWatchdog'
+
     # Acceleration and deceleration ramps
     property 'ramps', '/motors_weg_cvw300/configuration/Ramps'
 
     # How the motor is being controlled
-    property 'control_method',
+    property 'control_type',
              '/motors_weg_cvw300/configuration/ControlType', :CONTROL_ENCODER
 
     # Settings applicable for vectorial (encoder or sensorless) method
     property 'vectorial_settings',
              '/motors_weg_cvw300/configuration/VectorialControlSettings'
 
-    # Limits
     property 'limits', '/base/JointLimits'
 
-    # Commands
     input_port 'cmd_in', '/base/commands/Joints'
 
-    # Feedback
     output_port 'joint_samples', '/base/samples/Joints'
+
+    output_port 'temperatures', '/motors_weg_cvw300/InverterTemperatures'
+
+    output_port 'inverter_state', '/motors_weg_cvw300/InverterState'
+
+    exception_states 'INVALID_COMMAND_SIZE', 'INVALID_COMMAND_PARAMETER'
 end
