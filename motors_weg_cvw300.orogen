@@ -30,10 +30,6 @@ task_context 'Task', subclasses: 'iodrivers_base::Task' do
     property 'control_type',
              '/motors_weg_cvw300/configuration/ControlType', :CONTROL_ENCODER
 
-    # Settings applicable for vectorial (encoder or sensorless) method
-    property 'vectorial_settings',
-             '/motors_weg_cvw300/configuration/VectorialControlSettings'
-
     property 'limits', '/base/JointLimits'
 
     input_port 'cmd_in', '/base/commands/Joints'

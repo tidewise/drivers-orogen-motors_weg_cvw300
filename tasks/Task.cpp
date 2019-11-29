@@ -48,7 +48,6 @@ bool Task::configureHook()
     auto limits = _limits.get();
     driver->writeJointLimits(limits.elements.at(0));
     driver->writeRampConfiguration(_ramps.get());
-    driver->writeVectorialControlSettings(_vectorial_settings.get());
 
     m_cmd_in.elements.resize(1);
     m_sample.elements.resize(1);
