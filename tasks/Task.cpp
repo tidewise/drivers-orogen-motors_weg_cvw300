@@ -39,7 +39,7 @@ bool Task::configureHook()
     if (!TaskBase::configureHook())
         return false;
 
-    driver->readMotorParameters();
+    driver->readMotorRatings();
     driver->disable();
     auto wd = _watchdog.get();
     driver->writeSerialWatchdog(wd.timeout, wd.action);
