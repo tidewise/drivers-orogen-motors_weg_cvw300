@@ -136,6 +136,7 @@ void Task::errorHook()
 }
 void Task::stopHook()
 {
+    m_driver->disable();
     TaskBase::stopHook();
 }
 void Task::cleanupHook()
