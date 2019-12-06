@@ -18,8 +18,6 @@ Task::~Task()
 {
 }
 
-
-
 /// The following lines are template definitions for the various state machine
 // hooks defined by Orocos::RTT. See Task.hpp for more detailed
 // documentation about them.
@@ -37,8 +35,9 @@ bool Task::configureHook()
 
     // This is MANDATORY and MUST be called after the setDriver but before you do
     // anything with the driver
-    if (!TaskBase::configureHook())
+    if (!TaskBase::configureHook()) {
         return false;
+    }
 
     driver->setInterframeDelay(_modbus_interframe_delay.get());
 
@@ -64,8 +63,9 @@ bool Task::configureHook()
 
 bool Task::startHook()
 {
-    if (! TaskBase::startHook())
+    if (! TaskBase::startHook()) {
         return false;
+    }
 
     m_driver->enable();
     m_last_temperature_update = Time();
@@ -129,7 +129,8 @@ void Task::updateHook()
 
     TaskBase::updateHook();
 }
-void Task::processIO() {}
+void Task::processIO() {
+}
 void Task::errorHook()
 {
     TaskBase::errorHook();
