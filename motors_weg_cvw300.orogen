@@ -30,6 +30,14 @@ task_context 'Task', subclasses: 'iodrivers_base::Task' do
     property 'control_type',
              '/motors_weg_cvw300/configuration/ControlType', :CONTROL_ENCODER
 
+    # Modbus interframe delay
+    #
+    # The default value (20ms) is way bigger than the modbus-mandated standard
+    # (~ 1ms at 57600 bauds). It is however known to work for non-realtime,
+    # USB-wiedling setups. Tune this to lower values if you have a better
+    # setup (and know what you are doing)
+    property 'modbus_interframe_delay', '/base/Time'
+
     property 'limits', '/base/JointLimits'
 
     input_port 'cmd_in', '/base/commands/Joints'

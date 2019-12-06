@@ -11,6 +11,7 @@ using namespace motors_weg_cvw300;
 Task::Task(std::string const& name)
     : TaskBase(name)
 {
+    _modbus_interframe_delay.set(base::Time::fromMilliseconds(20));
 }
 
 Task::~Task()
@@ -38,6 +39,8 @@ bool Task::configureHook()
     // anything with the driver
     if (!TaskBase::configureHook())
         return false;
+
+    driver->setInterframeDelay(_modbus_interframe_delay.get());
 
     driver->readMotorRatings();
     driver->disable();
