@@ -47,6 +47,7 @@ bool Task::configureHook()
     driver->prepare();
     auto wd = _watchdog.get();
     driver->writeSerialWatchdog(wd.timeout, wd.action);
+    m_cmd_timeout = wd.timeout;
     driver->writeControlType(_control_type.get());
 
     auto limits = _limits.get();
@@ -68,7 +69,17 @@ bool Task::startHook()
 
     m_driver->enable();
     m_last_temperature_update = Time();
+    writeSpeedCommand(0);
     return true;
+}
+bool Task::commandTimedOut() const {
+    return !m_cmd_deadline.isNull() && (base::Time::now() > m_cmd_deadline);
+}
+void Task::writeSpeedCommand(float cmd) {
+    m_driver->writeSpeedCommand(cmd);
+    if (!m_cmd_timeout.isNull()) {
+        m_cmd_deadline = base::Time::now() + m_cmd_timeout;
+    }
 }
 void Task::updateHook()
 {
@@ -83,7 +94,11 @@ void Task::updateHook()
             exception(INVALID_COMMAND_PARAMETER);
         }
 
-        m_driver->writeSpeedCommand(joint.speed);
+        writeSpeedCommand(joint.speed);
+    }
+
+    if (commandTimedOut()) {
+        writeSpeedCommand(0);
     }
 
     auto now = Time::now();

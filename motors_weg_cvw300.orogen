@@ -21,6 +21,15 @@ task_context 'Task', subclasses: 'iodrivers_base::Task' do
     property 'temperature_period', '/base/Time'
 
     # Configure the internal watchdog
+    #
+    # This has two functions. The first one is to configure the
+    # controller to enter an alarm state if it does not receive
+    # data from the serial port (and how it should react when this happens).
+    #
+    # The second function is to make the component actively send a zero
+    # velocity command if no command is received within the watchdog timeout
+    #
+    # Set the watchdog timer to zero to disable
     property 'watchdog', '/motors_weg_cvw300/configuration/SerialWatchdog'
 
     # Acceleration and deceleration ramps
