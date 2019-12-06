@@ -104,6 +104,13 @@ void Task::updateHook()
         m_last_temperature_update = now;
     }
 
+    if (state.inverter_status == STATUS_FAULT) {
+        return exception(CONTROLLER_FAULT);
+    }
+    else if (state.inverter_status == STATUS_UNDERVOLTAGE) {
+        return exception(CONTROLLER_UNDER_VOLTAGE);
+    }
+
     TaskBase::updateHook();
 }
 void Task::processIO() {}
