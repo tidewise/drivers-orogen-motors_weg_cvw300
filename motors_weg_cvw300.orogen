@@ -49,4 +49,8 @@ task_context 'Task', subclasses: 'iodrivers_base::Task' do
     output_port 'inverter_state', '/motors_weg_cvw300/InverterState'
 
     exception_states 'INVALID_COMMAND_SIZE', 'INVALID_COMMAND_PARAMETER'
+
+    # There's no data coming from the controller without the driver requesting
+    # it first ... Must be periodic.
+    periodic 0.1
 end
