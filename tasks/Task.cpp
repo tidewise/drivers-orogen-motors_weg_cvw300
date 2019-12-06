@@ -25,11 +25,11 @@ Task::~Task()
 
 bool Task::configureHook()
 {
-        // Un-configure the device driver if the configure fails.
+    unique_ptr<Driver> driver(new Driver(_address.get()));
+    // Un-configure the device driver if the configure fails.
     // You MUST call guard.commit() once the driver is fully
     // functional (usually before the configureHook's "return true;"
     iodrivers_base::ConfigureGuard guard(this);
-    unique_ptr<Driver> driver(new Driver(_address.get()));
     if (!_io_port.get().empty())
         driver->openURI(_io_port.get());
     setDriver(driver.get());
