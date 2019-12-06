@@ -47,8 +47,18 @@ task_context 'Task', subclasses: 'iodrivers_base::Task' do
     # setup (and know what you are doing)
     property 'modbus_interframe_delay', '/base/Time'
 
+    # Control limits
+    #
+    # You may only set the speed and effort fields. Setting any other field
+    # will fail on configure
+    #
+    # If set, min and max speeds need to be the opposite of each other. The
+    # controller does not support limiting them separately
     property 'limits', '/base/JointLimits'
 
+    # Input command
+    #
+    # Only set the speed field
     input_port 'cmd_in', '/base/commands/Joints'
 
     output_port 'joint_samples', '/base/samples/Joints'
