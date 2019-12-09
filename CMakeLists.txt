@@ -5,6 +5,8 @@ set(CMAKE_CXX_STANDARD 11)
 SET (CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/.orogen/config")
 INCLUDE(motors_weg_cvw300Base)
 
-# FIND_PACKAGE(KDL)
-# FIND_PACKAGE(OCL)
-
+if (ROCK_TEST_ENABLED)
+    enable_testing()
+    find_package(Syskit REQUIRED)
+    syskit_orogen_tests(test)
+endif()

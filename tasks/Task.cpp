@@ -50,7 +50,9 @@ bool Task::configureHook()
     driver->writeControlType(_control_type.get());
 
     auto limits = _limits.get();
-    driver->writeJointLimits(limits.elements.at(0));
+    if (!limits.elements.empty()) {
+        driver->writeJointLimits(limits.elements.at(0));
+    }
     driver->writeRampConfiguration(_ramps.get());
 
     m_cmd_in.elements.resize(1);
@@ -67,9 +69,9 @@ bool Task::startHook()
         return false;
     }
 
+    writeSpeedCommand(0);
     m_driver->enable();
     m_last_temperature_update = Time();
-    writeSpeedCommand(0);
     return true;
 }
 bool Task::commandTimedOut() const {
