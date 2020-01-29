@@ -16,12 +16,18 @@ module ModbusHelpers
         [task, reader, writer]
     end
 
+    def modbus_helpers_setup(task, reader, writer)
+        @__modbus_task = task
+        @__modbus_reader = reader
+        @__modbus_writer = writer
+    end
+
     def modbus_stop_task
         expect_execution { task.stop! }
             .join_all_waiting_work(false)
             .poll do
-                while (sample = @reader.read_new)
-                    @writer.write(modbus_reply(sample))
+                while (sample = @__modbus_reader.read_new)
+                    @__modbus_writer.write(modbus_reply(sample))
                 end
             end
             .to { emit task.stop_event }
@@ -32,8 +38,8 @@ module ModbusHelpers
             .scheduler(true)
             .join_all_waiting_work(false)
             .poll do
-                while (sample = @reader.read_new)
-                    @writer.write(modbus_reply(sample))
+                while (sample = @__modbus_reader.read_new)
+                    @__modbus_writer.write(modbus_reply(sample))
                 end
             end
     end

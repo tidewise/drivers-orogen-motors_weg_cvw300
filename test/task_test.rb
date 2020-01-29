@@ -17,6 +17,7 @@ describe OroGen.motors_weg_cvw300.Task do
             OroGen.motors_weg_cvw300.Task
                   .deployed_as('motors_weg_cvw300_test')
         )
+        modbus_helpers_setup(@task, @reader, @writer)
 
         @task.properties.io_read_timeout = Time.at(2)
         @task.properties.modbus_interframe_delay = Time.at(0.01)
