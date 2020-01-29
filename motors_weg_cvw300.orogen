@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 name 'motors_weg_cvw300'
 
 import_types_from 'std'
@@ -21,6 +23,15 @@ task_context 'Task', subclasses: 'iodrivers_base::Task' do
     property 'temperature_period', '/base/Time'
 
     # Configure the internal watchdog
+    #
+    # This has two functions. The first one is to configure the
+    # controller to enter an alarm state if it does not receive
+    # data from the serial port (and how it should react when this happens).
+    #
+    # The second function is to make the component actively send a zero
+    # velocity command if no command is received within the watchdog timeout
+    #
+    # Set the watchdog timer to zero to disable
     property 'watchdog', '/motors_weg_cvw300/configuration/SerialWatchdog'
 
     # Acceleration and deceleration ramps
@@ -30,12 +41,26 @@ task_context 'Task', subclasses: 'iodrivers_base::Task' do
     property 'control_type',
              '/motors_weg_cvw300/configuration/ControlType', :CONTROL_ENCODER
 
-    # Settings applicable for vectorial (encoder or sensorless) method
-    property 'vectorial_settings',
-             '/motors_weg_cvw300/configuration/VectorialControlSettings'
+    # Modbus interframe delay
+    #
+    # The default value (20ms) is way bigger than the modbus-mandated standard
+    # (~ 1ms at 57600 bauds). It is however known to work for non-realtime,
+    # USB-wiedling setups. Tune this to lower values if you have a better
+    # setup (and know what you are doing)
+    property 'modbus_interframe_delay', '/base/Time'
 
+    # Control limits
+    #
+    # You may only set the speed and effort fields. Setting any other field
+    # will fail on configure
+    #
+    # If set, min and max speeds need to be the opposite of each other. The
+    # controller does not support limiting them separately
     property 'limits', '/base/JointLimits'
 
+    # Input command
+    #
+    # Only set the speed field
     input_port 'cmd_in', '/base/commands/Joints'
 
     output_port 'joint_samples', '/base/samples/Joints'
@@ -44,5 +69,10 @@ task_context 'Task', subclasses: 'iodrivers_base::Task' do
 
     output_port 'inverter_state', '/motors_weg_cvw300/InverterState'
 
-    exception_states 'INVALID_COMMAND_SIZE', 'INVALID_COMMAND_PARAMETER'
+    exception_states 'INVALID_COMMAND_SIZE', 'INVALID_COMMAND_PARAMETER',
+                     'CONTROLLER_FAULT', 'CONTROLLER_UNDER_VOLTAGE'
+
+    # There's no data coming from the controller without the driver requesting
+    # it first ... Must be periodic.
+    periodic 0.1
 end

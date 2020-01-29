@@ -30,8 +30,13 @@ namespace motors_weg_cvw300{
         base::commands::Joints m_cmd_in;
         base::samples::Joints m_sample;
         base::Time m_last_temperature_update;
+        base::Time m_cmd_timeout;
+        base::Time m_cmd_deadline;
 
         std::unique_ptr<Driver> m_driver;
+
+        void writeSpeedCommand(float cmd);
+        bool commandTimedOut() const;
 
     public:
         /** TaskContext constructor for Task

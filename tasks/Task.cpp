@@ -11,13 +11,12 @@ using namespace motors_weg_cvw300;
 Task::Task(std::string const& name)
     : TaskBase(name)
 {
+    _modbus_interframe_delay.set(base::Time::fromMilliseconds(20));
 }
 
 Task::~Task()
 {
 }
-
-
 
 /// The following lines are template definitions for the various state machine
 // hooks defined by Orocos::RTT. See Task.hpp for more detailed
@@ -25,30 +24,36 @@ Task::~Task()
 
 bool Task::configureHook()
 {
-        // Un-configure the device driver if the configure fails.
+    unique_ptr<Driver> driver(new Driver(_address.get()));
+    // Un-configure the device driver if the configure fails.
     // You MUST call guard.commit() once the driver is fully
     // functional (usually before the configureHook's "return true;"
     iodrivers_base::ConfigureGuard guard(this);
-    unique_ptr<Driver> driver(new Driver(_address.get()));
     if (!_io_port.get().empty())
         driver->openURI(_io_port.get());
     setDriver(driver.get());
 
     // This is MANDATORY and MUST be called after the setDriver but before you do
     // anything with the driver
-    if (!TaskBase::configureHook())
+    if (!TaskBase::configureHook()) {
         return false;
+    }
+
+    driver->setInterframeDelay(_modbus_interframe_delay.get());
 
     driver->readMotorRatings();
     driver->disable();
+    driver->prepare();
     auto wd = _watchdog.get();
     driver->writeSerialWatchdog(wd.timeout, wd.action);
+    m_cmd_timeout = wd.timeout;
     driver->writeControlType(_control_type.get());
 
     auto limits = _limits.get();
-    driver->writeJointLimits(limits.elements.at(0));
+    if (!limits.elements.empty()) {
+        driver->writeJointLimits(limits.elements.at(0));
+    }
     driver->writeRampConfiguration(_ramps.get());
-    driver->writeVectorialControlSettings(_vectorial_settings.get());
 
     m_cmd_in.elements.resize(1);
     m_sample.elements.resize(1);
@@ -60,12 +65,23 @@ bool Task::configureHook()
 
 bool Task::startHook()
 {
-    if (! TaskBase::startHook())
+    if (! TaskBase::startHook()) {
         return false;
+    }
 
+    writeSpeedCommand(0);
     m_driver->enable();
     m_last_temperature_update = Time();
     return true;
+}
+bool Task::commandTimedOut() const {
+    return !m_cmd_deadline.isNull() && (base::Time::now() > m_cmd_deadline);
+}
+void Task::writeSpeedCommand(float cmd) {
+    m_driver->writeSpeedCommand(cmd);
+    if (!m_cmd_timeout.isNull()) {
+        m_cmd_deadline = base::Time::now() + m_cmd_timeout;
+    }
 }
 void Task::updateHook()
 {
@@ -80,7 +96,11 @@ void Task::updateHook()
             exception(INVALID_COMMAND_PARAMETER);
         }
 
-        m_driver->writeSpeedCommand(joint.speed);
+        writeSpeedCommand(joint.speed);
+    }
+
+    if (commandTimedOut()) {
+        writeSpeedCommand(0);
     }
 
     auto now = Time::now();
@@ -102,15 +122,24 @@ void Task::updateHook()
         m_last_temperature_update = now;
     }
 
+    if (state.inverter_status == STATUS_FAULT) {
+        return exception(CONTROLLER_FAULT);
+    }
+    else if (state.inverter_status == STATUS_UNDERVOLTAGE) {
+        return exception(CONTROLLER_UNDER_VOLTAGE);
+    }
+
     TaskBase::updateHook();
 }
-void Task::processIO() {}
+void Task::processIO() {
+}
 void Task::errorHook()
 {
     TaskBase::errorHook();
 }
 void Task::stopHook()
 {
+    m_driver->disable();
     TaskBase::stopHook();
 }
 void Task::cleanupHook()
