@@ -58,6 +58,8 @@ bool Task::configureHook()
     m_cmd_in.elements.resize(1);
     m_sample.elements.resize(1);
 
+    m_inverted = _inverted.get();
+
     m_driver = move(driver);
     guard.commit();
     return true;
@@ -78,7 +80,7 @@ bool Task::commandTimedOut() const {
     return !m_cmd_deadline.isNull() && (base::Time::now() > m_cmd_deadline);
 }
 void Task::writeSpeedCommand(float cmd) {
-    m_driver->writeSpeedCommand(cmd);
+    m_driver->writeSpeedCommand(m_inverted ? -cmd : cmd);
     if (!m_cmd_timeout.isNull()) {
         m_cmd_deadline = base::Time::now() + m_cmd_timeout;
     }
@@ -106,7 +108,15 @@ void Task::updateHook()
     auto now = Time::now();
     CurrentState state = m_driver->readCurrentState();
     m_sample.time = now;
-    m_sample.elements[0] = state.motor;
+    auto joint_state = state.motor;
+    std::cout << "Task speed: " << state.motor.speed <<  " " << m_inverted << std::endl;
+    if (m_inverted) {
+        joint_state.speed = -joint_state.speed;
+        joint_state.effort = -joint_state.effort;
+        joint_state.raw = -joint_state.raw;
+    }
+    std::cout << "            " << joint_state.speed <<  " " << m_inverted << std::endl;
+    m_sample.elements[0] = joint_state;
     _joint_samples.write(m_sample);
 
     InverterState state_out;
