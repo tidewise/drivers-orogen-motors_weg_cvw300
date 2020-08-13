@@ -1,26 +1,26 @@
 # frozen_string_literal: true
 
-name 'motors_weg_cvw300'
+name "motors_weg_cvw300"
 
-import_types_from 'std'
-import_types_from 'base'
+import_types_from "std"
+import_types_from "base"
 
-using_library 'motors_weg_cvw300'
-import_types_from 'motors_weg_cvw300/Configuration.hpp'
-import_types_from 'motors_weg_cvw300/InverterTemperatures.hpp'
+using_library "motors_weg_cvw300"
+import_types_from "motors_weg_cvw300/Configuration.hpp"
+import_types_from "motors_weg_cvw300/InverterTemperatures.hpp"
 
-import_types_from 'motors_weg_cvw300Types.hpp'
+import_types_from "motors_weg_cvw300Types.hpp"
 
-using_task_library 'iodrivers_base'
+using_task_library "iodrivers_base"
 
-task_context 'Task', subclasses: 'iodrivers_base::Task' do
+task_context "Task", subclasses: "iodrivers_base::Task" do
     needs_configuration
 
     # The device address on the RS485 bus
-    property 'address', 'int', 1
+    property "address", "int", 1
 
     # Update period for the temperature output
-    property 'temperature_period', '/base/Time'
+    property "temperature_period", "/base/Time"
 
     # Configure the internal watchdog
     #
@@ -32,14 +32,14 @@ task_context 'Task', subclasses: 'iodrivers_base::Task' do
     # velocity command if no command is received within the watchdog timeout
     #
     # Set the watchdog timer to zero to disable
-    property 'watchdog', '/motors_weg_cvw300/configuration/SerialWatchdog'
+    property "watchdog", "/motors_weg_cvw300/configuration/SerialWatchdog"
 
     # Acceleration and deceleration ramps
-    property 'ramps', '/motors_weg_cvw300/configuration/Ramps'
+    property "ramps", "/motors_weg_cvw300/configuration/Ramps"
 
     # How the motor is being controlled
-    property 'control_type',
-             '/motors_weg_cvw300/configuration/ControlType', :CONTROL_ENCODER
+    property "control_type",
+             "/motors_weg_cvw300/configuration/ControlType", :CONTROL_ENCODER
 
     # Modbus interframe delay
     #
@@ -47,7 +47,7 @@ task_context 'Task', subclasses: 'iodrivers_base::Task' do
     # (~ 1ms at 57600 bauds). It is however known to work for non-realtime,
     # USB-wiedling setups. Tune this to lower values if you have a better
     # setup (and know what you are doing)
-    property 'modbus_interframe_delay', '/base/Time'
+    property "modbus_interframe_delay", "/base/Time"
 
     # Control limits
     #
@@ -56,21 +56,21 @@ task_context 'Task', subclasses: 'iodrivers_base::Task' do
     #
     # If set, min and max speeds need to be the opposite of each other. The
     # controller does not support limiting them separately
-    property 'limits', '/base/JointLimits'
+    property "limits", "/base/JointLimits"
 
     # Input command
     #
     # Only set the speed field
-    input_port 'cmd_in', '/base/commands/Joints'
+    input_port "cmd_in", "/base/commands/Joints"
 
-    output_port 'joint_samples', '/base/samples/Joints'
+    output_port "joint_samples", "/base/samples/Joints"
 
-    output_port 'temperatures', '/motors_weg_cvw300/InverterTemperatures'
+    output_port "temperatures", "/motors_weg_cvw300/InverterTemperatures"
 
-    output_port 'inverter_state', '/motors_weg_cvw300/InverterState'
+    output_port "inverter_state", "/motors_weg_cvw300/InverterState"
 
-    exception_states 'INVALID_COMMAND_SIZE', 'INVALID_COMMAND_PARAMETER',
-                     'CONTROLLER_FAULT', 'CONTROLLER_UNDER_VOLTAGE'
+    exception_states "INVALID_COMMAND_SIZE", "INVALID_COMMAND_PARAMETER",
+                     "CONTROLLER_FAULT", "CONTROLLER_UNDER_VOLTAGE"
 
     # There's no data coming from the controller without the driver requesting
     # it first ... Must be periodic.

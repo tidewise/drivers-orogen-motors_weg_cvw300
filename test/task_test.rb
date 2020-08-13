@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require_relative 'modbus_helpers'
+require_relative "modbus_helpers"
 
-using_task_library 'motors_weg_cvw300'
+using_task_library "motors_weg_cvw300"
 
 describe OroGen.motors_weg_cvw300.Task do
     run_live
@@ -15,7 +15,7 @@ describe OroGen.motors_weg_cvw300.Task do
     before do
         @task, @reader, @writer = iodrivers_base_prepare(
             OroGen.motors_weg_cvw300.Task
-                  .deployed_as('motors_weg_cvw300_test')
+                  .deployed_as("motors_weg_cvw300_test")
         )
         modbus_helpers_setup(@task, @reader, @writer)
 
@@ -48,18 +48,18 @@ describe OroGen.motors_weg_cvw300.Task do
         modbus_stop_task if task.running?
     end
 
-    describe 'configuration' do
-        it 'sets the control type' do
+    describe "configuration" do
+        it "sets the control type" do
             task.properties.control_type = :CONTROL_SENSORLESS
             modbus_configure_and_start
             assert_equal 1, modbus_get(202)
         end
 
-        it 'sets the ramps' do
+        it "sets the ramps" do
             task.properties.ramps = {
                 acceleration_time: Time.at(5.1),
                 deceleration_time: Time.at(7.2),
-                type: 'RAMP_S_CURVE'
+                type: "RAMP_S_CURVE"
             }
             modbus_configure_and_start
             assert_equal 5, modbus_get(100)
@@ -67,7 +67,7 @@ describe OroGen.motors_weg_cvw300.Task do
             assert_equal 1, modbus_get(104)
         end
 
-        it 'sets the speed limits' do
+        it "sets the speed limits" do
             rpm100 = 100 * 2 * Math::PI / 60
             task.properties.limits = Types.base.JointLimits.new(
                 elements: [{
@@ -82,8 +82,8 @@ describe OroGen.motors_weg_cvw300.Task do
         end
     end
 
-    describe 'command watchdog' do
-        it 'periodically sends zero velocity commands' do
+    describe "command watchdog" do
+        it "periodically sends zero velocity commands" do
             @task.properties.watchdog do |sw|
                 sw.timeout = Time.at(0.01)
                 sw
@@ -96,7 +96,8 @@ describe OroGen.motors_weg_cvw300.Task do
             end
         end
 
-        it 'waits watchdog.timeout after a new command before it sends a new velocity command again' do
+        it "waits watchdog.timeout after a new command before it sends "\
+           "a new velocity command again" do
             modbus_configure_and_start
 
             cmd = Types.base.samples.Joints.new(
@@ -115,7 +116,7 @@ describe OroGen.motors_weg_cvw300.Task do
             assert((Time.now - tic) > 0.4)
         end
 
-        it 'does not send zero velocity commnds if new commands are regularly sent' do
+        it "does not send zero velocity commnds if new commands are regularly sent" do
             @task.properties.watchdog do |sw|
                 sw.timeout = Time.at(0.1)
                 sw
@@ -132,7 +133,7 @@ describe OroGen.motors_weg_cvw300.Task do
                     # Note: register 683 is expressed in ratio of nominal speed,
                     # with 0x2000 (8192) == 100%
                     if modbus_write?(sample, register: 683, value: 0)
-                        flunk('received zero velocity command')
+                        flunk("received zero velocity command")
                     else
                         modbus_write?(sample, register: 683, value: 0x1000)
                         sleep 0.02
