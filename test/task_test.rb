@@ -45,7 +45,7 @@ describe OroGen.motors_weg_cvw300.Task do
     end
 
     after do
-        modbus_stop_task if task.running?
+        modbus_stop_task if task&.running?
     end
 
     describe "configuration" do
@@ -79,6 +79,80 @@ describe OroGen.motors_weg_cvw300.Task do
             modbus_configure_and_start
 
             assert_equal 100, modbus_get(134)
+        end
+    end
+
+    describe "inverted = false" do
+        before do
+            @task.properties.inverted = false
+            modbus_configure_and_start
+        end
+
+        it "sends the command as given" do
+            cmd = Types.base.samples.Joints.new(
+                elements: [Types.base.JointState.Speed(1000 * 2 * Math::PI / 60)]
+            )
+            syskit_write task.cmd_in_port, cmd
+
+            modbus_reply_until(@writer, @reader) do |sample|
+                modbus_write?(sample, register: 683, value: 0x1000)
+            end
+        end
+
+        it "reports the motor status as-is" do
+            # speed, current, battery voltage, frequency, inverter status
+            # output voltage and torque
+
+            modbus_set 2, 15
+            modbus_set 3, 12
+            modbus_set 4, 421
+            modbus_set 5, 502
+            modbus_set 6, 4
+            modbus_set 7, 128
+            modbus_set 9, 243
+
+            sample = modbus_expect_execution(@writer, @reader).to do
+                have_one_new_sample task.joint_samples_port
+            end
+            assert_in_delta 1.57, sample.elements[0].speed, 1e-2
+            assert_in_delta 13.92, sample.elements[0].effort, 1e-2
+        end
+    end
+
+    describe "inverted = true" do
+        before do
+            @task.properties.inverted = true
+            modbus_configure_and_start
+        end
+
+        it "sends an inverted command" do
+            cmd = Types.base.samples.Joints.new(
+                elements: [Types.base.JointState.Speed(1000 * 2 * Math::PI / 60)]
+            )
+            syskit_write task.cmd_in_port, cmd
+
+            modbus_reply_until(@writer, @reader) do |sample|
+                modbus_write?(sample, register: 683, value: 0xf000)
+            end
+        end
+
+        it "inverts the motor status" do
+            # speed, current, battery voltage, frequency, inverter status
+            # output voltage and torque
+
+            modbus_set 2, 15
+            modbus_set 3, 12
+            modbus_set 4, 421
+            modbus_set 5, 502
+            modbus_set 6, 4
+            modbus_set 7, 128
+            modbus_set 9, 243
+
+            sample = modbus_expect_execution(@writer, @reader).to do
+                have_one_new_sample task.joint_samples_port
+            end
+            assert_in_delta -1.57, sample.elements[0].speed, 1e-2
+            assert_in_delta -13.92, sample.elements[0].effort, 1e-2
         end
     end
 

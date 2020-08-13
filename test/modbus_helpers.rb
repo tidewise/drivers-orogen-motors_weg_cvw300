@@ -1,5 +1,9 @@
 # frozen_string_literal: true
 
+# Helpers to deal with the component's expected modbus replies
+#
+# It is based on a register dictionary, and "emulates" the device by
+# automatically reading/writing values to this dictionary
 module ModbusHelpers
     def setup
         super
@@ -58,6 +62,16 @@ module ModbusHelpers
         raise ArgumentError, "register #{register} not set"
     end
 
+    def modbus_expect_execution(writer, reader, &block)
+        expect_execution(&block)
+            .join_all_waiting_work(false)
+            .poll do
+                while (s = reader.read_new)
+                    writer.write(modbus_reply(s))
+                end
+            end
+    end
+
     def modbus_reply_until(writer, reader)
         sample = nil
         expect_execution
@@ -96,7 +110,7 @@ module ModbusHelpers
             reply << register_count * 2
             register_count.times do |i|
                 register_value = modbus_get(start_address + i)
-                reply += [register_value >> 8, register_value & 0xFF]
+                reply += [register_value].pack("s>").unpack("C*")
             end
         end
         reply += modbus_crc(reply)

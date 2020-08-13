@@ -19,6 +19,9 @@ task_context "Task", subclasses: "iodrivers_base::Task" do
     # The device address on the RS485 bus
     property "address", "int", 1
 
+    # Whether to invert command and feedback w.r.t. the controller's direction
+    property "inverted", "/bool", false
+
     # Update period for the temperature output
     property "temperature_period", "/base/Time"
 
