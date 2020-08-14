@@ -42,6 +42,8 @@ describe OroGen.motors_weg_cvw300.Task do
 
         modbus_set(30, 0) # mosfet temperature (0.1 C)
         modbus_set(34, 0) # air temperature (0.1 C)
+
+        modbus_set(37, 20) # motor overload ration (percentage 0-100)
     end
 
     after do
