@@ -4,6 +4,7 @@
 #include <base/Time.hpp>
 #include <motors_weg_cvw300/Configuration.hpp>
 #include <motors_weg_cvw300/InverterStatus.hpp>
+#include <motors_weg_cvw300/FaultState.hpp>
 
 namespace motors_weg_cvw300 {
     namespace configuration {
