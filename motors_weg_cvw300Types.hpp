@@ -21,6 +21,7 @@ namespace motors_weg_cvw300 {
         float battery_voltage;
         float inverter_output_voltage;
         float inverter_output_frequency;
+        float motor_overload_ratio;
 
         InverterStatus inverter_status;
     };

@@ -126,6 +126,7 @@ void Task::updateHook()
     InverterState state_out;
     state_out.time = now;
     state_out.battery_voltage = state.battery_voltage;
+    state_out.motor_overload_ratio = state.motor_overload_ratio;
     state_out.inverter_output_voltage = state.inverter_output_voltage;
     state_out.inverter_output_frequency = state.inverter_output_frequency;
     state_out.inverter_status = state.inverter_status;
