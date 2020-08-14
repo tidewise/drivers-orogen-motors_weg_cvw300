@@ -117,6 +117,12 @@ void Task::updateHook()
     m_sample.elements[0] = joint_state;
     _joint_samples.write(m_sample);
 
+
+    auto fault_state = m_driver->readFaultState();
+    if (fault_state.current_alarm != 0 || fault_state.current_fault != 0) {
+        _fault_state.write(fault_state);
+    }
+
     InverterState state_out;
     state_out.time = now;
     state_out.battery_voltage = state.battery_voltage;

@@ -8,6 +8,7 @@ import_types_from "base"
 using_library "motors_weg_cvw300"
 import_types_from "motors_weg_cvw300/Configuration.hpp"
 import_types_from "motors_weg_cvw300/InverterTemperatures.hpp"
+import_types_from "motors_weg_cvw300/FaultState.hpp"
 
 import_types_from "motors_weg_cvw300Types.hpp"
 
@@ -71,6 +72,8 @@ task_context "Task", subclasses: "iodrivers_base::Task" do
     output_port "temperatures", "/motors_weg_cvw300/InverterTemperatures"
 
     output_port "inverter_state", "/motors_weg_cvw300/InverterState"
+
+    output_port "fault_state", "/motors_weg_cvw300/FaultState"
 
     exception_states "INVALID_COMMAND_SIZE", "INVALID_COMMAND_PARAMETER",
                      "CONTROLLER_FAULT", "CONTROLLER_UNDER_VOLTAGE"
