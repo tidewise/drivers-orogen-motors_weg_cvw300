@@ -109,13 +109,11 @@ void Task::updateHook()
     CurrentState state = m_driver->readCurrentState();
     m_sample.time = now;
     auto joint_state = state.motor;
-    std::cout << "Task speed: " << state.motor.speed <<  " " << m_inverted << std::endl;
     if (m_inverted) {
         joint_state.speed = -joint_state.speed;
         joint_state.effort = -joint_state.effort;
         joint_state.raw = -joint_state.raw;
     }
-    std::cout << "            " << joint_state.speed <<  " " << m_inverted << std::endl;
     m_sample.elements[0] = joint_state;
     _joint_samples.write(m_sample);
 
