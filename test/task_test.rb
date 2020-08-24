@@ -42,6 +42,11 @@ describe OroGen.motors_weg_cvw300.Task do
 
         modbus_set(30, 0) # mosfet temperature (0.1 C)
         modbus_set(34, 0) # air temperature (0.1 C)
+
+        modbus_set(37, 20) # motor overload ration (percentage 0-100)
+
+        modbus_set(48, 0) # alarms
+        modbus_set(49, 0) # faults
     end
 
     after do
@@ -79,6 +84,37 @@ describe OroGen.motors_weg_cvw300.Task do
             modbus_configure_and_start
 
             assert_equal 100, modbus_get(134)
+        end
+    end
+
+    describe "fault and alarm reporting" do
+        it "does not output on the fault_state port if there is no alarm or fault " do
+            modbus_configure_and_start
+            expect_execution.timeout(1).to do
+                have_no_new_sample task.fault_state_port
+            end
+        end
+
+        it "outputs the fault state structure if there is an alarm" do
+            modbus_configure_and_start
+
+            now = Time.now
+            sample = modbus_expect_execution(@writer, @reader) { modbus_set(48, 1) }
+                     .to { have_one_new_sample task.fault_state_port }
+            assert Time.at(now.tv_sec, 0) < sample.time
+            assert_equal 1, sample.current_alarm
+            assert_equal 0, sample.current_fault
+        end
+
+        it "outputs the fault state structure if there is a fault" do
+            modbus_configure_and_start
+
+            now = Time.now
+            sample = modbus_expect_execution(@writer, @reader) { modbus_set(49, 1) }
+                     .to { have_one_new_sample task.fault_state_port }
+            assert Time.at(now.tv_sec, 0) < sample.time
+            assert_equal 0, sample.current_alarm
+            assert_equal 1, sample.current_fault
         end
     end
 

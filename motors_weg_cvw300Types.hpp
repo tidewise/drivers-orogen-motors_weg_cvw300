@@ -4,6 +4,7 @@
 #include <base/Time.hpp>
 #include <motors_weg_cvw300/Configuration.hpp>
 #include <motors_weg_cvw300/InverterStatus.hpp>
+#include <motors_weg_cvw300/FaultState.hpp>
 
 namespace motors_weg_cvw300 {
     namespace configuration {
@@ -20,6 +21,7 @@ namespace motors_weg_cvw300 {
         float battery_voltage;
         float inverter_output_voltage;
         float inverter_output_frequency;
+        float motor_overload_ratio;
 
         InverterStatus inverter_status;
     };

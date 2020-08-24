@@ -109,19 +109,24 @@ void Task::updateHook()
     CurrentState state = m_driver->readCurrentState();
     m_sample.time = now;
     auto joint_state = state.motor;
-    std::cout << "Task speed: " << state.motor.speed <<  " " << m_inverted << std::endl;
     if (m_inverted) {
         joint_state.speed = -joint_state.speed;
         joint_state.effort = -joint_state.effort;
         joint_state.raw = -joint_state.raw;
     }
-    std::cout << "            " << joint_state.speed <<  " " << m_inverted << std::endl;
     m_sample.elements[0] = joint_state;
     _joint_samples.write(m_sample);
+
+
+    auto fault_state = m_driver->readFaultState();
+    if (fault_state.current_alarm != 0 || fault_state.current_fault != 0) {
+        _fault_state.write(fault_state);
+    }
 
     InverterState state_out;
     state_out.time = now;
     state_out.battery_voltage = state.battery_voltage;
+    state_out.motor_overload_ratio = state.motor_overload_ratio;
     state_out.inverter_output_voltage = state.inverter_output_voltage;
     state_out.inverter_output_frequency = state.inverter_output_frequency;
     state_out.inverter_status = state.inverter_status;
