@@ -121,10 +121,10 @@ describe OroGen.motors_weg_cvw300.Task do
     describe "inverted = false" do
         before do
             @task.properties.inverted = false
-            modbus_configure_and_start
         end
 
         it "sends the command as given" do
+            modbus_configure_and_start
             cmd = Types.base.samples.Joints.new(
                 elements: [Types.base.JointState.Speed(1000 * 2 * Math::PI / 60)]
             )
@@ -147,6 +147,7 @@ describe OroGen.motors_weg_cvw300.Task do
             modbus_set 7, 128
             modbus_set 9, 243
 
+            modbus_configure_and_start
             sample = modbus_expect_execution(@writer, @reader).to do
                 have_one_new_sample task.joint_samples_port
             end
@@ -158,10 +159,10 @@ describe OroGen.motors_weg_cvw300.Task do
     describe "inverted = true" do
         before do
             @task.properties.inverted = true
-            modbus_configure_and_start
         end
 
         it "sends an inverted command" do
+            modbus_configure_and_start
             cmd = Types.base.samples.Joints.new(
                 elements: [Types.base.JointState.Speed(1000 * 2 * Math::PI / 60)]
             )
@@ -184,6 +185,7 @@ describe OroGen.motors_weg_cvw300.Task do
             modbus_set 7, 128
             modbus_set 9, 243
 
+            modbus_configure_and_start
             sample = modbus_expect_execution(@writer, @reader).to do
                 have_one_new_sample task.joint_samples_port
             end
