@@ -4,6 +4,29 @@
 #
 # It is based on a register dictionary, and "emulates" the device by
 # automatically reading/writing values to this dictionary
+#
+# In modbus_configure_and_start, the component might go "a little
+# bit further" than the start, and actually read the speed but
+# not finish a complete state update. The tests would then "finish"
+# the state update and the sample would have a zero speed.
+#
+#   Component             Syskit
+#   --------              ------
+#                         ENTER modbus_configure_and_start
+#   ENTER startHook       |
+#   EXIT startHook        |
+#   ENTER updateHook      |
+#   READ register 2       |
+#   |                     EXIT modbus_configure_and_start
+#   |                     ENTER test
+#   READ other registers  |
+#   WRITE sample          |
+#   |                     have_one_new_sample -> speed == 0
+#   EXIT updateHook
+#
+# To handle this, either look for an eventual behavior (using for instance the
+# filtered version of have_one_new_sample, or the achieve expectation), or set
+# the modbus dictionary entries before the start.
 module ModbusHelpers
     def setup
         super
@@ -48,6 +71,10 @@ module ModbusHelpers
             end
     end
 
+    # Configure and start the modbus component given to {#modbus_helpers_setup}
+    #
+    # See the {ModbusHelpers} documentation for caveats w.r.t. expectations and
+    # starting the component
     def modbus_configure_and_start
         modbus_expect_during_configuration_and_start.to { emit task.start_event }
     end
