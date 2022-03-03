@@ -45,8 +45,20 @@ describe OroGen.motors_weg_cvw300.Task do
 
         modbus_set(37, 20) # motor overload ration (percentage 0-100)
 
-        modbus_set(48, 0) # alarms
-        modbus_set(49, 0) # faults
+        modbus_set(48, 0) # current alarm
+        modbus_set(49, 0) # current fault
+
+        modbus_set(50, 1) # last faults
+        modbus_set(54, 2)
+        modbus_set(58, 3)
+        modbus_set(62, 4)
+        modbus_set(66, 5)
+        modbus_set(90, 11) # inverter state during last fault
+        modbus_set(91, 12)
+        modbus_set(92, 13)
+        modbus_set(93, 14)
+        modbus_set(94, 15)
+        modbus_set(95, 16)
     end
 
     after do
@@ -95,26 +107,76 @@ describe OroGen.motors_weg_cvw300.Task do
             end
         end
 
-        it "outputs the fault state structure if there is an alarm" do
-            modbus_configure_and_start
-
+        it "outputs the fault state on start" do
             now = Time.now
-            sample = modbus_expect_execution(@writer, @reader) { modbus_set(48, 1) }
-                     .to { have_one_new_sample task.fault_state_port }
+            sample = modbus_expect_during_configuration_and_start.to do
+                have_one_new_sample task.fault_state_port
+            end
+
             assert Time.at(now.tv_sec, 0) < sample.time
-            assert_equal 1, sample.current_alarm
             assert_equal 0, sample.current_fault
+            assert_equal [1, 2, 3, 4, 5], sample.fault_history.to_a
+            assert_in_delta 1.1, sample.current
+            assert_in_delta 1.2, sample.battery_voltage
+            assert_equal 13, (sample.speed / 2 / Math::PI * 60).round
+            assert_equal 14, (sample.command / 2 / Math::PI * 60).round
+            assert_in_delta 1.5, sample.inverter_output_frequency
+            assert_in_delta 1.6, sample.inverter_output_voltage
         end
 
-        it "outputs the fault state structure if there is a fault" do
+        it "outputs an alarm state structure if there is an alarm" do
             modbus_configure_and_start
 
             now = Time.now
-            sample = modbus_expect_execution(@writer, @reader) { modbus_set(49, 1) }
-                     .to { have_one_new_sample task.fault_state_port }
+            sample = modbus_expect_execution(@writer, @reader) do
+                modbus_set(48, 1)
+            end.to { have_one_new_sample task.alarm_state_port }
             assert Time.at(now.tv_sec, 0) < sample.time
-            assert_equal 0, sample.current_alarm
+            assert_equal 1, sample.current_alarm
+        end
+
+        it "outputs a fault state structure and transitions to fault if the inverter is in under-voltage" do
+            modbus_configure_and_start
+
+            now = Time.now
+            sample = modbus_expect_execution(@writer, @reader) do
+                modbus_set(49, 1)
+                modbus_set(6, 2)
+            end.to do
+                emit task.controller_under_voltage_event
+                have_one_new_sample task.fault_state_port
+            end
+            assert Time.at(now.tv_sec, 0) < sample.time
             assert_equal 1, sample.current_fault
+            assert_equal [1, 2, 3, 4, 5], sample.fault_history.to_a
+            assert_in_delta 1.1, sample.current
+            assert_in_delta 1.2, sample.battery_voltage
+            assert_equal 13, (sample.speed / 2 / Math::PI * 60).round
+            assert_equal 14, (sample.command / 2 / Math::PI * 60).round
+            assert_in_delta 1.5, sample.inverter_output_frequency
+            assert_in_delta 1.6, sample.inverter_output_voltage
+        end
+
+        it "outputs a fault state structure and transitions to fault if there is a fault" do
+            modbus_configure_and_start
+
+            now = Time.now
+            sample = modbus_expect_execution(@writer, @reader) do
+                modbus_set(49, 1)
+                modbus_set(6, 3)
+            end.to do
+                emit task.controller_fault_event
+                have_one_new_sample task.fault_state_port
+            end
+            assert Time.at(now.tv_sec, 0) < sample.time
+            assert_equal 1, sample.current_fault
+            assert_equal [1, 2, 3, 4, 5], sample.fault_history.to_a
+            assert_in_delta 1.1, sample.current
+            assert_in_delta 1.2, sample.battery_voltage
+            assert_equal 13, (sample.speed / 2 / Math::PI * 60).round
+            assert_equal 14, (sample.command / 2 / Math::PI * 60).round
+            assert_in_delta 1.5, sample.inverter_output_frequency
+            assert_in_delta 1.6, sample.inverter_output_voltage
         end
     end
 
