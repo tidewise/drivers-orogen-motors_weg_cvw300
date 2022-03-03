@@ -74,6 +74,8 @@ bool Task::startHook()
     writeSpeedCommand(0);
     m_driver->enable();
     m_last_temperature_update = Time();
+
+    publishFault();
     return true;
 }
 bool Task::commandTimedOut() const {

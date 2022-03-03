@@ -107,6 +107,23 @@ describe OroGen.motors_weg_cvw300.Task do
             end
         end
 
+        it "outputs the fault state on start" do
+            now = Time.now
+            sample = modbus_expect_during_configuration_and_start.to do
+                have_one_new_sample task.fault_state_port
+            end
+
+            assert Time.at(now.tv_sec, 0) < sample.time
+            assert_equal 0, sample.current_fault
+            assert_equal [1, 2, 3, 4, 5], sample.fault_history.to_a
+            assert_in_delta 1.1, sample.current
+            assert_in_delta 1.2, sample.battery_voltage
+            assert_equal 13, (sample.speed / 2 / Math::PI * 60).round
+            assert_equal 14, (sample.command / 2 / Math::PI * 60).round
+            assert_in_delta 1.5, sample.inverter_output_frequency
+            assert_in_delta 1.6, sample.inverter_output_voltage
+        end
+
         it "outputs an alarm state structure if there is an alarm" do
             modbus_configure_and_start
 
