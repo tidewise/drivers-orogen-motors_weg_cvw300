@@ -25,6 +25,11 @@ namespace motors_weg_cvw300 {
 
         InverterStatus inverter_status;
     };
+
+    struct AlarmState {
+        base::Time time;
+        int current_alarm;
+    };
 }
 
 #endif

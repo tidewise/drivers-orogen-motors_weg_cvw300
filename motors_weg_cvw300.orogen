@@ -73,6 +73,7 @@ task_context "Task", subclasses: "iodrivers_base::Task" do
 
     output_port "inverter_state", "/motors_weg_cvw300/InverterState"
 
+    output_port "alarm_state", "/motors_weg_cvw300/AlarmState"
     output_port "fault_state", "/motors_weg_cvw300/FaultState"
 
     exception_states "INVALID_COMMAND_SIZE", "INVALID_COMMAND_PARAMETER",

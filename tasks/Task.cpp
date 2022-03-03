@@ -118,11 +118,6 @@ void Task::updateHook()
     _joint_samples.write(m_sample);
 
 
-    auto fault_state = m_driver->readFaultState();
-    if (fault_state.current_alarm != 0 || fault_state.current_fault != 0) {
-        _fault_state.write(fault_state);
-    }
-
     InverterState state_out;
     state_out.time = now;
     state_out.battery_voltage = state.battery_voltage;
@@ -132,19 +127,34 @@ void Task::updateHook()
     state_out.inverter_status = state.inverter_status;
     _inverter_state.write(state_out);
 
+    int current_alarm = m_driver->readCurrentAlarm();
+    if (current_alarm) {
+        AlarmState alarmState;
+        alarmState.time = Time::now();
+        alarmState.current_alarm = current_alarm;
+        _alarm_state.write(alarmState);
+
+    }
+
     if (now - m_last_temperature_update > _temperature_period.get()) {
         _temperatures.write(m_driver->readTemperatures());
         m_last_temperature_update = now;
     }
 
     if (state.inverter_status == STATUS_FAULT) {
+        publishFault();
         return exception(CONTROLLER_FAULT);
     }
     else if (state.inverter_status == STATUS_UNDERVOLTAGE) {
+        publishFault();
         return exception(CONTROLLER_UNDER_VOLTAGE);
     }
 
     TaskBase::updateHook();
+}
+void Task::publishFault() {
+    auto fault_state = m_driver->readFaultState();
+    _fault_state.write(fault_state);
 }
 void Task::processIO() {
 }

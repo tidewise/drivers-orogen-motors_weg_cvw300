@@ -39,6 +39,7 @@ namespace motors_weg_cvw300{
 
         void writeSpeedCommand(float cmd);
         bool commandTimedOut() const;
+        void publishFault();
 
     public:
         /** TaskContext constructor for Task

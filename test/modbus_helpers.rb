@@ -60,8 +60,8 @@ module ModbusHelpers
             .to { emit task.stop_event }
     end
 
-    def modbus_expect_during_configuration_and_start
-        expect_execution
+    def modbus_expect_during_configuration_and_start(&block)
+        expect_execution(&block)
             .scheduler(true)
             .join_all_waiting_work(false)
             .poll do
