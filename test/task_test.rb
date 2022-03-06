@@ -256,6 +256,38 @@ describe OroGen.motors_weg_cvw300.Task do
         end
     end
 
+    describe "input validation" do
+        it "transitions to INVALID_COMMAND_SIZE if the input command is empty" do
+            modbus_configure_and_start
+            cmd = Types.base.samples.Joints.new(elements: [])
+            expect_execution { syskit_write task.cmd_in_port, cmd }
+                .to { emit task.invalid_command_size_event }
+        end
+
+        it "transitions to INVALID_COMMAND_SIZE if the input command "\
+           "has more than one element" do
+            modbus_configure_and_start
+            cmd = Types.base.samples.Joints.new(
+                elements: [
+                    Types.base.JointState.Speed(1000 * 2 * Math::PI / 60),
+                    Types.base.JointState.Speed(1000 * 2 * Math::PI / 60)
+                ]
+            )
+            expect_execution { syskit_write task.cmd_in_port, cmd }
+                .to { emit task.invalid_command_size_event }
+        end
+
+        it "transitions to INVALID_COMMAND_PARAMETER if the input command "\
+           "does not have a valid speed" do
+            modbus_configure_and_start
+            cmd = Types.base.samples.Joints.new(
+                elements: [Types.base.JointState.Speed(Float::NAN)]
+            )
+            expect_execution { syskit_write task.cmd_in_port, cmd }
+                .to { emit task.invalid_command_parameter_event }
+        end
+    end
+
     describe "command watchdog" do
         it "periodically sends zero velocity commands" do
             @task.properties.watchdog do |sw|
