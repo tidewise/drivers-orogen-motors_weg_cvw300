@@ -91,13 +91,12 @@ void Task::updateHook()
 {
     while (_cmd_in.read(m_cmd_in) == RTT::NewData) {
         if (m_cmd_in.elements.size() != 1) {
-            exception(INVALID_COMMAND_SIZE);
-            return;
+            return exception(INVALID_COMMAND_SIZE);
         }
 
         auto joint = m_cmd_in.elements.at(0);
         if (!joint.isSpeed()) {
-            exception(INVALID_COMMAND_PARAMETER);
+            return exception(INVALID_COMMAND_PARAMETER);
         }
 
         writeSpeedCommand(joint.speed);
