@@ -330,7 +330,7 @@ describe OroGen.motors_weg_cvw300.Task do
 
         it "does not send zero velocity commnds if new commands are regularly sent" do
             @task.properties.watchdog do |sw|
-                sw.timeout = Time.at(0.1)
+                sw.timeout = Time.at(0.2)
                 sw
             end
             modbus_configure_and_start
