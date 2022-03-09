@@ -260,8 +260,10 @@ describe OroGen.motors_weg_cvw300.Task do
         it "transitions to INVALID_COMMAND_SIZE if the input command is empty" do
             modbus_configure_and_start
             cmd = Types.base.samples.Joints.new(elements: [])
-            expect_execution { syskit_write task.cmd_in_port, cmd }
-                .to { emit task.invalid_command_size_event }
+            syskit_write task.cmd_in_port, cmd
+            modbus_expect_execution(@writer, @reader).to do
+                emit task.invalid_command_size_event
+            end
         end
 
         it "transitions to INVALID_COMMAND_SIZE if the input command "\
@@ -273,8 +275,10 @@ describe OroGen.motors_weg_cvw300.Task do
                     Types.base.JointState.Speed(1000 * 2 * Math::PI / 60)
                 ]
             )
-            expect_execution { syskit_write task.cmd_in_port, cmd }
-                .to { emit task.invalid_command_size_event }
+            syskit_write task.cmd_in_port, cmd
+            modbus_expect_execution(@writer, @reader) do
+                emit task.invalid_command_size_event
+            end
         end
 
         it "transitions to INVALID_COMMAND_PARAMETER if the input command "\
@@ -283,8 +287,10 @@ describe OroGen.motors_weg_cvw300.Task do
             cmd = Types.base.samples.Joints.new(
                 elements: [Types.base.JointState.Speed(Float::NAN)]
             )
-            expect_execution { syskit_write task.cmd_in_port, cmd }
-                .to { emit task.invalid_command_parameter_event }
+            syskit_write task.cmd_in_port, cmd
+            modbus_expect_execution(@writer, @reader) do
+                emit task.invalid_command_parameter_event
+            end
         end
     end
 
@@ -324,7 +330,7 @@ describe OroGen.motors_weg_cvw300.Task do
 
         it "does not send zero velocity commnds if new commands are regularly sent" do
             @task.properties.watchdog do |sw|
-                sw.timeout = Time.at(0.1)
+                sw.timeout = Time.at(0.2)
                 sw
             end
             modbus_configure_and_start
