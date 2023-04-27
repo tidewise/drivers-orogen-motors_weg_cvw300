@@ -110,6 +110,7 @@ describe OroGen.motors_weg_cvw300.Task do
         it "outputs the fault state on start" do
             now = Time.now
             sample = modbus_expect_during_configuration_and_start.to do
+                emit task.start_event
                 have_one_new_sample task.fault_state_port
             end
 
