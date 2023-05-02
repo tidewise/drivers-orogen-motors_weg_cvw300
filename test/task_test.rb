@@ -62,7 +62,7 @@ describe OroGen.motors_weg_cvw300.Task do
     end
 
     after do
-        modbus_stop_task if task&.running?
+        modbus_stop_task if task&.running? && !task&.finishing?
     end
 
     describe "configuration" do
