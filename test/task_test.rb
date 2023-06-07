@@ -277,7 +277,7 @@ describe OroGen.motors_weg_cvw300.Task do
                 ]
             )
             syskit_write task.cmd_in_port, cmd
-            modbus_expect_execution(@writer, @reader) do
+            modbus_expect_execution(@writer, @reader).to do
                 emit task.invalid_command_size_event
             end
         end
@@ -289,7 +289,7 @@ describe OroGen.motors_weg_cvw300.Task do
                 elements: [Types.base.JointState.Speed(Float::NAN)]
             )
             syskit_write task.cmd_in_port, cmd
-            modbus_expect_execution(@writer, @reader) do
+            modbus_expect_execution(@writer, @reader).to do
                 emit task.invalid_command_parameter_event
             end
         end
