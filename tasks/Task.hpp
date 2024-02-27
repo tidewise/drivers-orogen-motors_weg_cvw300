@@ -6,13 +6,16 @@
 #include "motors_weg_cvw300/TaskBase.hpp"
 #include <base/commands/Joints.hpp>
 
-namespace motors_weg_cvw300{
+namespace motors_weg_cvw300 {
     class Driver;
 
     /*! \class Task
-     * \brief The task context provides and requires services. It uses an ExecutionEngine to perform its functions.
-     * Essential interfaces are operations, data flow ports and properties. These interfaces have been defined using the oroGen specification.
-     * In order to modify the interfaces you should (re)use oroGen and rely on the associated workflow.
+     * \brief The task context provides and requires services. It uses an ExecutionEngine
+     to perform its functions.
+     * Essential interfaces are operations, data flow ports and properties. These
+     interfaces have been defined using the oroGen specification.
+     * In order to modify the interfaces you should (re)use oroGen and rely on the
+     associated workflow.
      *
      * \details
      * The name of a TaskContext is primarily defined via:
@@ -21,11 +24,12 @@ namespace motors_weg_cvw300{
          task('custom_task_name','motors_weg_cvw300::Task')
      end
      \endverbatim
-     *  It can be dynamically adapted when the deployment is called with a prefix argument.
+     *  It can be dynamically adapted when the deployment is called with a prefix
+     argument.
      */
-    class Task : public TaskBase
-    {
-	friend class TaskBase;
+    class Task : public TaskBase {
+        friend class TaskBase;
+
     protected:
         base::commands::Joints m_cmd_in;
         base::samples::Joints m_sample;
@@ -43,14 +47,15 @@ namespace motors_weg_cvw300{
 
     public:
         /** TaskContext constructor for Task
-         * \param name Name of the task. This name needs to be unique to make it identifiable via nameservices.
-         * \param initial_state The initial TaskState of the TaskContext. Default is Stopped state.
+         * \param name Name of the task. This name needs to be unique to make it
+         * identifiable via nameservices. \param initial_state The initial TaskState of
+         * the TaskContext. Default is Stopped state.
          */
         Task(std::string const& name = "motors_weg_cvw300::Task");
 
         /** Default deconstructor of Task
          */
-	~Task();
+        ~Task();
 
         /** This hook is called by Orocos when the state machine transitions
          * from PreOperational to Stopped. If it returns false, then the
@@ -115,4 +120,3 @@ namespace motors_weg_cvw300{
 }
 
 #endif
-

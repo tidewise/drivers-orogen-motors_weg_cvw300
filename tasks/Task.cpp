@@ -1,8 +1,8 @@
 /* Generated from orogen/lib/orogen/templates/tasks/Task.cpp */
 
 #include "Task.hpp"
-#include <motors_weg_cvw300/Driver.hpp>
 #include <iodrivers_base/ConfigureGuard.hpp>
+#include <motors_weg_cvw300/Driver.hpp>
 
 using namespace std;
 using namespace base;
@@ -39,6 +39,12 @@ bool Task::configureHook()
         return false;
     }
 
+    auto motor_registers = _registers_configuration.get();
+    for (auto& motor_register : motor_registers) {
+        driver->writeSingleRegister<uint16_t>(motor_register.parameter,
+            motor_register.value);
+    }
+
     driver->setInterframeDelay(_modbus_interframe_delay.get());
 
     driver->readMotorRatings();
@@ -67,7 +73,7 @@ bool Task::configureHook()
 
 bool Task::startHook()
 {
-    if (! TaskBase::startHook()) {
+    if (!TaskBase::startHook()) {
         return false;
     }
 
@@ -78,10 +84,12 @@ bool Task::startHook()
     publishFault();
     return true;
 }
-bool Task::commandTimedOut() const {
+bool Task::commandTimedOut() const
+{
     return !m_cmd_deadline.isNull() && (base::Time::now() > m_cmd_deadline);
 }
-void Task::writeSpeedCommand(float cmd) {
+void Task::writeSpeedCommand(float cmd)
+{
     m_driver->writeSpeedCommand(m_inverted ? -cmd : cmd);
     if (!m_cmd_timeout.isNull()) {
         m_cmd_deadline = base::Time::now() + m_cmd_timeout;
@@ -118,7 +126,6 @@ void Task::updateHook()
     m_sample.elements[0] = joint_state;
     _joint_samples.write(m_sample);
 
-
     InverterState state_out;
     state_out.time = now;
     state_out.battery_voltage = state.battery_voltage;
@@ -134,7 +141,6 @@ void Task::updateHook()
         alarmState.time = Time::now();
         alarmState.current_alarm = current_alarm;
         _alarm_state.write(alarmState);
-
     }
 
     if (now - m_last_temperature_update > _temperature_period.get()) {
@@ -153,11 +159,13 @@ void Task::updateHook()
 
     TaskBase::updateHook();
 }
-void Task::publishFault() {
+void Task::publishFault()
+{
     auto fault_state = m_driver->readFaultState();
     _fault_state.write(fault_state);
 }
-void Task::processIO() {
+void Task::processIO()
+{
 }
 void Task::errorHook()
 {
