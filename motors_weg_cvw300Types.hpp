@@ -3,8 +3,8 @@
 
 #include <base/Time.hpp>
 #include <motors_weg_cvw300/Configuration.hpp>
-#include <motors_weg_cvw300/InverterStatus.hpp>
 #include <motors_weg_cvw300/FaultState.hpp>
+#include <motors_weg_cvw300/InverterStatus.hpp>
 
 namespace motors_weg_cvw300 {
     namespace configuration {
@@ -12,6 +12,11 @@ namespace motors_weg_cvw300 {
             base::Time timeout = base::Time::fromSeconds(1);
             configuration::CommunicationErrorAction action =
                 configuration::STOP_WITH_RAMP;
+        };
+
+        struct MotorRegister {
+            uint parameter;
+            uint16_t value;
         };
     }
 
@@ -33,4 +38,3 @@ namespace motors_weg_cvw300 {
 }
 
 #endif
-

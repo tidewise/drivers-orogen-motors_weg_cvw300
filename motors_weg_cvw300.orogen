@@ -62,6 +62,13 @@ task_context "Task", subclasses: "iodrivers_base::Task" do
     # controller does not support limiting them separately
     property "limits", "/base/JointLimits"
 
+    # Registers configuration
+    #
+    # The list of registers with their respective values to perform the initial
+    # configuration of the engines.
+    property "registers_configuration",
+             "/std/vector</motors_weg_cvw300/configuration/MotorRegister>"
+
     # Input command
     #
     # Only set the speed field

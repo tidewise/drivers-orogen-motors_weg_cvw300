@@ -97,6 +97,17 @@ describe OroGen.motors_weg_cvw300.Task do
 
             assert_equal 100, modbus_get(134)
         end
+
+        it "sets the motor registers" do
+            task.properties.registers_configuration = [{ parameter: 402, value: 500 },
+                                                       { parameter: 401, value: 30 },
+                                                       { parameter: 404, value: 1 }]
+
+            modbus_configure_and_start
+            assert_equal 500, modbus_get(402)
+            assert_equal 30, modbus_get(401)
+            assert_equal 1, modbus_get(404)
+        end
     end
 
     describe "fault and alarm reporting" do
