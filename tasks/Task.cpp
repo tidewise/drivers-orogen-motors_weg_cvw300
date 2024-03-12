@@ -136,12 +136,10 @@ void Task::updateHook()
     _inverter_state.write(state_out);
 
     int current_alarm = m_driver->readCurrentAlarm();
-    if (current_alarm) {
-        AlarmState alarmState;
-        alarmState.time = Time::now();
-        alarmState.current_alarm = current_alarm;
-        _alarm_state.write(alarmState);
-    }
+    AlarmState alarmState;
+    alarmState.time = Time::now();
+    alarmState.current_alarm = current_alarm;
+    _alarm_state.write(alarmState);
 
     if (now - m_last_temperature_update > _temperature_period.get()) {
         _temperatures.write(m_driver->readTemperatures());

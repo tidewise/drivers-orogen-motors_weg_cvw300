@@ -147,6 +147,15 @@ describe OroGen.motors_weg_cvw300.Task do
             assert_equal 1, sample.current_alarm
         end
 
+        it "outputs an zeroed alarm state structure if there is no alarm" do
+            modbus_configure_and_start
+
+            now = Time.now
+            sample = modbus_expect_execution(@writer, @reader).to { have_one_new_sample task.alarm_state_port }
+            assert Time.at(now.tv_sec, 0) < sample.time
+            assert_equal 0, sample.current_alarm
+        end
+
         it "outputs a fault state structure and transitions to fault if the inverter is in under-voltage" do
             modbus_configure_and_start
 
