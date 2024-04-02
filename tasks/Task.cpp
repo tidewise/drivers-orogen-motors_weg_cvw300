@@ -7,6 +7,7 @@
 using namespace std;
 using namespace base;
 using namespace motors_weg_cvw300;
+using namespace usv_control;
 
 Task::Task(std::string const& name)
     : TaskBase(name)
@@ -55,9 +56,9 @@ bool Task::configureHook()
     m_cmd_timeout = wd.timeout;
     driver->writeControlType(_control_type.get());
 
-    auto limits = _limits.get();
-    if (!limits.elements.empty()) {
-        driver->writeJointLimits(limits.elements.at(0));
+    m_limits = _limits.get();
+    if (!m_limits.elements.empty()) {
+        driver->writeJointLimits(m_limits.elements.at(0));
     }
     driver->writeRampConfiguration(_ramps.get());
 
@@ -95,6 +96,16 @@ void Task::writeSpeedCommand(float cmd)
         m_cmd_deadline = base::Time::now() + m_cmd_timeout;
     }
 }
+bool Task::checkSpeedSaturation(base::commands::Joints const& cmd)
+{
+    if (!m_limits.elements.empty()) {
+        if (cmd.elements[0].speed >= m_limits.elements[0].max.speed) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void Task::updateHook()
 {
     while (_cmd_in.read(m_cmd_in) == RTT::NewData) {
@@ -108,6 +119,11 @@ void Task::updateHook()
         }
 
         writeSpeedCommand(joint.speed);
+
+        SaturationSignal saturation_signal;
+        saturation_signal.value = checkSpeedSaturation(m_cmd_in);
+        saturation_signal.time = m_cmd_in.time;
+        _saturation_signal.write(saturation_signal);
     }
 
     if (commandTimedOut()) {

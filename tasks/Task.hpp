@@ -33,6 +33,7 @@ namespace motors_weg_cvw300 {
     protected:
         base::commands::Joints m_cmd_in;
         base::samples::Joints m_sample;
+        base::JointLimits m_limits;
         base::Time m_last_temperature_update;
         base::Time m_cmd_timeout;
         base::Time m_cmd_deadline;
@@ -44,6 +45,7 @@ namespace motors_weg_cvw300 {
         void writeSpeedCommand(float cmd);
         bool commandTimedOut() const;
         void publishFault();
+        bool checkSpeedSaturation(base::commands::Joints const& cmd);
 
     public:
         /** TaskContext constructor for Task
