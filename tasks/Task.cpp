@@ -57,9 +57,15 @@ bool Task::configureHook()
     driver->writeControlType(_control_type.get());
 
     m_limits = _limits.get();
-    if (!m_limits.elements.empty()) {
+    if (m_limits.elements.empty()) {
+        // Initialize limits as infinity
+        JointLimits infinity;
+        m_limits = infinity;
+    }
+    else {
         driver->writeJointLimits(m_limits.elements.at(0));
     }
+
     driver->writeRampConfiguration(_ramps.get());
 
     m_cmd_in.elements.resize(1);
@@ -98,12 +104,8 @@ void Task::writeSpeedCommand(float cmd)
 }
 bool Task::checkSpeedSaturation(base::commands::Joints const& cmd)
 {
-    if (!m_limits.elements.empty()) {
-        if (cmd.elements[0].speed >= m_limits.elements[0].max.speed) {
-            return true;
-        }
-    }
-    return false;
+    return cmd.elements[0].speed >= m_limits.elements[0].max.speed ||
+           cmd.elements[0].speed <= m_limits.elements[0].min.speed;
 }
 
 void Task::updateHook()
