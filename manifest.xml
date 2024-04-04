@@ -8,8 +8,7 @@
   <depend package="drivers/motors_weg_cvw300" />
   <depend package="base/orogen/types" />
   <depend package="drivers/orogen/iodrivers_base" />
-  <depend package="control/usv_control" />
-  <depend package="control/orogen/usv_control" />
+  <depend package="control/orogen/control_base" />
 
   <test_depend package="tools/syskit" />
 </package>

@@ -13,9 +13,8 @@ import_types_from "motors_weg_cvw300/FaultState.hpp"
 import_types_from "motors_weg_cvw300Types.hpp"
 
 using_task_library "iodrivers_base"
-using_library "usv_control"
-import_types_from "usv_control"
-import_types_from "usv_control/SaturationSignal.hpp"
+using_library "control_base"
+import_types_from "control_base"
 
 task_context "Task", subclasses: "iodrivers_base::Task" do
     needs_configuration
@@ -86,7 +85,7 @@ task_context "Task", subclasses: "iodrivers_base::Task" do
     output_port "alarm_state", "/motors_weg_cvw300/AlarmState"
     output_port "fault_state", "/motors_weg_cvw300/FaultState"
 
-    output_port "saturation_signal", "/usv_control/SaturationSignal"
+    output_port "saturation_signal", "/control_base/SaturationSignal"
 
     exception_states "INVALID_COMMAND_SIZE", "INVALID_COMMAND_PARAMETER",
                      "CONTROLLER_FAULT", "CONTROLLER_UNDER_VOLTAGE"

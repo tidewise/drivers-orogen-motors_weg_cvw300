@@ -121,20 +121,30 @@ describe OroGen.motors_weg_cvw300.Task do
             )
         end
 
-        it "does not output a saturation signal" do
+        it "does not output a saturation signal if there is no new command" do
             modbus_configure_and_start
-            cmd = Types.base.samples.Joints.new(
-                elements: [Types.base.JointState.Speed(1000 * 2 * Math::PI / 60)]
-            )
             modbus_expect_execution(@writer, @reader).to do
                 have_no_new_sample(task.saturation_signal_port, at_least_during: 0.5)
             end
         end
 
-        it "outputs a saturated signal" do
+        it "outputs a saturated signal if the command is greater than the maximum limit" do
             modbus_configure_and_start
             cmd = Types.base.samples.Joints.new(
                 elements: [Types.base.JointState.Speed(1000 * 2 * Math::PI / 60)]
+            )
+            signal = modbus_expect_execution(@writer, @reader) do
+                syskit_write task.cmd_in_port, cmd
+            end.to do
+                have_one_new_sample task.saturation_signal_port
+            end
+            assert_equal(1, signal.value)
+        end
+
+        it "outputs a saturated signal if the command is less than the minimum limit" do
+            modbus_configure_and_start
+            cmd = Types.base.samples.Joints.new(
+                elements: [Types.base.JointState.Speed(-1000 * 2 * Math::PI / 60)]
             )
             signal = modbus_expect_execution(@writer, @reader) do
                 syskit_write task.cmd_in_port, cmd

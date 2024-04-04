@@ -7,7 +7,7 @@
 using namespace std;
 using namespace base;
 using namespace motors_weg_cvw300;
-using namespace usv_control;
+using namespace control_base;
 
 Task::Task(std::string const& name)
     : TaskBase(name)
@@ -58,8 +58,11 @@ bool Task::configureHook()
 
     m_limits = _limits.get();
     if (m_limits.elements.empty()) {
-        // Initialize limits as infinity
+        // Initialize speed limits as infinity
         JointLimits infinity;
+        JointLimitRange range;
+        range.Speed(-base::infinity<float>(), base::infinity<float>());
+        infinity.elements.push_back(range);
         m_limits = infinity;
     }
     else {
