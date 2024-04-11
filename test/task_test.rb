@@ -110,6 +110,64 @@ describe OroGen.motors_weg_cvw300.Task do
         end
     end
 
+    describe "saturation signal reporting" do
+        before do
+            rpm100 = 100 * 2 * Math::PI / 60
+            task.properties.limits = Types.base.JointLimits.new(
+                elements: [{
+                    min: Types.base.JointState.Speed(-rpm100),
+                    max: Types.base.JointState.Speed(rpm100)
+                }]
+            )
+        end
+
+        it "does not output a saturation signal if there is no new command" do
+            modbus_configure_and_start
+            modbus_expect_execution(@writer, @reader).to do
+                have_no_new_sample(task.saturation_signal_port, at_least_during: 0.5)
+            end
+        end
+
+        it "outputs a saturated signal if the command is greater than the maximum limit" do
+            modbus_configure_and_start
+            cmd = Types.base.samples.Joints.new(
+                elements: [Types.base.JointState.Speed(1000 * 2 * Math::PI / 60)]
+            )
+            signal = modbus_expect_execution(@writer, @reader) do
+                syskit_write task.cmd_in_port, cmd
+            end.to do
+                have_one_new_sample task.saturation_signal_port
+            end
+            assert_equal(1, signal.value)
+        end
+
+        it "outputs a saturated signal if the command is less than the minimum limit" do
+            modbus_configure_and_start
+            cmd = Types.base.samples.Joints.new(
+                elements: [Types.base.JointState.Speed(-1000 * 2 * Math::PI / 60)]
+            )
+            signal = modbus_expect_execution(@writer, @reader) do
+                syskit_write task.cmd_in_port, cmd
+            end.to do
+                have_one_new_sample task.saturation_signal_port
+            end
+            assert_equal(1, signal.value)
+        end
+
+        it "outputs an unsaturated signal" do
+            modbus_configure_and_start
+            cmd = Types.base.samples.Joints.new(
+                elements: [Types.base.JointState.Speed(10 * 2 * Math::PI / 60)]
+            )
+            signal = modbus_expect_execution(@writer, @reader) do
+                syskit_write task.cmd_in_port, cmd
+            end.to do
+                have_one_new_sample task.saturation_signal_port
+            end
+            assert_equal(0, signal.value)
+        end
+    end
+
     describe "fault and alarm reporting" do
         it "does not output on the fault_state port if there is no alarm or fault " do
             modbus_configure_and_start
