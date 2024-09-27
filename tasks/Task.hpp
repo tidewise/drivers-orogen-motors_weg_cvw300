@@ -46,6 +46,8 @@ namespace motors_weg_cvw300 {
         bool commandTimedOut() const;
         void publishFault();
         bool checkSpeedSaturation(base::commands::Joints const& cmd);
+        void evaluateInverterStatus(InverterStatus const& inverter_status);
+        CurrentState readAndPublishControllerStates();
 
     public:
         /** TaskContext constructor for Task
