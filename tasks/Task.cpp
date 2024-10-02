@@ -198,11 +198,12 @@ void Task::errorHook()
     publishFault();
 
     // Try to reset the faults
-    m_driver->prepare();
+    m_driver->resetFault();
     // Verify if the controller status is not in FAULT state
     auto state = readAndPublishControllerStates();
     if (state.inverter_status != STATUS_FAULT &&
         state.inverter_status != STATUS_UNDERVOLTAGE) {
+        m_driver->enable();
         recover();
     }
 
