@@ -87,8 +87,8 @@ task_context "Task", subclasses: "iodrivers_base::Task" do
 
     output_port "saturation_signal", "/control_base/SaturationSignal"
 
-    exception_states "INVALID_COMMAND_SIZE", "INVALID_COMMAND_PARAMETER",
-                     "CONTROLLER_FAULT", "CONTROLLER_UNDER_VOLTAGE"
+    exception_states "INVALID_COMMAND_SIZE", "INVALID_COMMAND_PARAMETER"
+    error_states "CONTROLLER_FAULT", "CONTROLLER_UNDER_VOLTAGE"
 
     # There's no data coming from the controller without the driver requesting
     # it first ... Must be periodic.

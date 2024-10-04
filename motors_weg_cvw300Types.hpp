@@ -5,6 +5,7 @@
 #include <motors_weg_cvw300/Configuration.hpp>
 #include <motors_weg_cvw300/FaultState.hpp>
 #include <motors_weg_cvw300/InverterStatus.hpp>
+#include <motors_weg_cvw300/CurrentState.hpp>
 
 namespace motors_weg_cvw300 {
     namespace configuration {

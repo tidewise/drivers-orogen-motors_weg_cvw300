@@ -110,31 +110,8 @@ bool Task::checkSpeedSaturation(base::commands::Joints const& cmd)
     return cmd.elements[0].speed >= m_limits.elements[0].max.speed ||
            cmd.elements[0].speed <= m_limits.elements[0].min.speed;
 }
-
-void Task::updateHook()
+CurrentState Task::readAndPublishControllerStates()
 {
-    while (_cmd_in.read(m_cmd_in) == RTT::NewData) {
-        if (m_cmd_in.elements.size() != 1) {
-            return exception(INVALID_COMMAND_SIZE);
-        }
-
-        auto joint = m_cmd_in.elements.at(0);
-        if (!joint.isSpeed()) {
-            return exception(INVALID_COMMAND_PARAMETER);
-        }
-
-        writeSpeedCommand(joint.speed);
-
-        SaturationSignal saturation_signal;
-        saturation_signal.value = checkSpeedSaturation(m_cmd_in);
-        saturation_signal.time = m_cmd_in.time;
-        _saturation_signal.write(saturation_signal);
-    }
-
-    if (commandTimedOut()) {
-        writeSpeedCommand(0);
-    }
-
     auto now = Time::now();
     CurrentState state = m_driver->readCurrentState();
     m_sample.time = now;
@@ -166,22 +143,50 @@ void Task::updateHook()
         _temperatures.write(m_driver->readTemperatures());
         m_last_temperature_update = now;
     }
-
-    if (state.inverter_status == STATUS_FAULT) {
-        publishFault();
-        return exception(CONTROLLER_FAULT);
+    return state;
+}
+void Task::evaluateInverterStatus(InverterStatus const& inverter_status)
+{
+    if (inverter_status == STATUS_FAULT) {
+        error(CONTROLLER_FAULT);
     }
-    else if (state.inverter_status == STATUS_UNDERVOLTAGE) {
-        publishFault();
-        return exception(CONTROLLER_UNDER_VOLTAGE);
+    else if (inverter_status == STATUS_UNDERVOLTAGE) {
+        error(CONTROLLER_UNDER_VOLTAGE);
     }
-
-    TaskBase::updateHook();
 }
 void Task::publishFault()
 {
     auto fault_state = m_driver->readFaultState();
     _fault_state.write(fault_state);
+}
+void Task::updateHook()
+{
+    while (_cmd_in.read(m_cmd_in) == RTT::NewData) {
+        if (m_cmd_in.elements.size() != 1) {
+            return exception(INVALID_COMMAND_SIZE);
+        }
+
+        auto joint = m_cmd_in.elements.at(0);
+        if (!joint.isSpeed()) {
+            return exception(INVALID_COMMAND_PARAMETER);
+        }
+
+        writeSpeedCommand(joint.speed);
+
+        SaturationSignal saturation_signal;
+        saturation_signal.value = checkSpeedSaturation(m_cmd_in);
+        saturation_signal.time = m_cmd_in.time;
+        _saturation_signal.write(saturation_signal);
+    }
+
+    if (commandTimedOut()) {
+        writeSpeedCommand(0);
+    }
+
+    auto state = readAndPublishControllerStates();
+    evaluateInverterStatus(state.inverter_status);
+
+    TaskBase::updateHook();
 }
 void Task::processIO()
 {
@@ -189,6 +194,22 @@ void Task::processIO()
 void Task::errorHook()
 {
     TaskBase::errorHook();
+
+    publishFault();
+
+    // Try to reset the faults
+    m_driver->resetFault();
+    // Verify if the controller status is not in FAULT state
+    auto state = readAndPublishControllerStates();
+    if (state.inverter_status != STATUS_FAULT &&
+        state.inverter_status != STATUS_UNDERVOLTAGE) {
+        m_driver->enable();
+        recover();
+    }
+
+    if (_cmd_in.read(m_cmd_in) == RTT::NewData) {
+        evaluateInverterStatus(state.inverter_status);
+    }
 }
 void Task::stopHook()
 {

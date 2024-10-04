@@ -59,6 +59,10 @@ describe OroGen.motors_weg_cvw300.Task do
         modbus_set(93, 14)
         modbus_set(94, 15)
         modbus_set(95, 16)
+
+        modbus_set(265, 11) # no external fault
+        modbus_set(266, 12) # reset
+        modbus_set(275, 21) # pre-charge ok
     end
 
     after do
@@ -236,6 +240,82 @@ describe OroGen.motors_weg_cvw300.Task do
             assert_in_delta 1.6, sample.inverter_output_voltage
         end
 
+        it "keeps writing on the output ports when it is in error state when the inverter is in under-voltage status" do
+            modbus_configure_and_start
+
+            now = Time.now
+            modbus_expect_execution(@writer, @reader) do
+                modbus_set(49, 1)
+                modbus_set(6, 2)
+            end.to do
+                emit task.controller_under_voltage_event
+                have_one_new_sample task.fault_state_port
+                have_one_new_sample task.joint_samples_port
+                have_one_new_sample task.inverter_state_port
+                have_one_new_sample task.alarm_state_port
+                have_one_new_sample task.temperatures_port
+            end
+
+            modbus_expect_execution(@writer, @reader).to do
+                have_one_new_sample task.fault_state_port
+                have_one_new_sample task.joint_samples_port
+                have_one_new_sample task.inverter_state_port
+                have_one_new_sample task.alarm_state_port
+                have_one_new_sample task.temperatures_port
+            end
+        end
+
+        it "transits between error state and running state when the inverter stops reporting the under-voltage status" do
+            modbus_configure_and_start
+
+            now = Time.now
+            modbus_expect_execution(@writer, @reader) do
+                modbus_set(49, 1)
+                modbus_set(6, 2)
+            end.to do
+                emit task.controller_under_voltage_event
+            end
+
+            modbus_expect_execution(@writer, @reader) do
+                modbus_set(49, 1)
+                modbus_set(6, 1)
+            end.to do
+                emit task.running_event
+            end
+
+            modbus_expect_execution(@writer, @reader) do
+                modbus_set(49, 1)
+                modbus_set(6, 2)
+            end.to do
+                emit task.controller_under_voltage_event
+            end
+        end
+
+        it "emits the last error state when receiving new input commands while the inverter is in under-voltage status" do
+            modbus_configure_and_start
+
+            now = Time.now
+            modbus_expect_execution(@writer, @reader) do
+                modbus_set(49, 1)
+                modbus_set(6, 2)
+            end.to do
+                emit task.controller_under_voltage_event
+            end
+
+            modbus_expect_execution(@writer, @reader).to do
+                not_emit task.controller_under_voltage_event, within: 0.2
+            end
+
+            cmd = Types.base.samples.Joints.new(
+                elements: [Types.base.JointState.Speed(1000 * 2 * Math::PI / 60)]
+            )
+            modbus_expect_execution(@writer, @reader) do
+                syskit_write task.cmd_in_port, cmd
+            end.to do
+                emit task.controller_under_voltage_event
+            end
+        end
+
         it "outputs a fault state structure and transitions to fault if there is a fault" do
             modbus_configure_and_start
 
@@ -256,6 +336,82 @@ describe OroGen.motors_weg_cvw300.Task do
             assert_equal 14, (sample.command / 2 / Math::PI * 60).round
             assert_in_delta 1.5, sample.inverter_output_frequency
             assert_in_delta 1.6, sample.inverter_output_voltage
+        end
+
+        it "keeps writing on the output ports when it is in error state when the inverter is in fault status" do
+            modbus_configure_and_start
+
+            now = Time.now
+            modbus_expect_execution(@writer, @reader) do
+                modbus_set(49, 1)
+                modbus_set(6, 3)
+            end.to do
+                emit task.controller_fault_event
+                have_one_new_sample task.fault_state_port
+                have_one_new_sample task.joint_samples_port
+                have_one_new_sample task.inverter_state_port
+                have_one_new_sample task.alarm_state_port
+                have_one_new_sample task.temperatures_port
+            end
+
+            modbus_expect_execution(@writer, @reader).to do
+                have_one_new_sample task.fault_state_port
+                have_one_new_sample task.joint_samples_port
+                have_one_new_sample task.inverter_state_port
+                have_one_new_sample task.alarm_state_port
+                have_one_new_sample task.temperatures_port
+            end
+        end
+
+        it "transits between error state and running state when the inverter stops reporting the fault status" do
+            modbus_configure_and_start
+
+            now = Time.now
+            modbus_expect_execution(@writer, @reader) do
+                modbus_set(49, 1)
+                modbus_set(6, 3)
+            end.to do
+                emit task.controller_fault_event
+            end
+
+            modbus_expect_execution(@writer, @reader) do
+                modbus_set(49, 1)
+                modbus_set(6, 1)
+            end.to do
+                emit task.running_event
+            end
+
+            modbus_expect_execution(@writer, @reader) do
+                modbus_set(49, 1)
+                modbus_set(6, 3)
+            end.to do
+                emit task.controller_fault_event
+            end
+        end
+
+        it "emits the last error state when receiving new input commands while the inverter is in fault status" do
+            modbus_configure_and_start
+
+            now = Time.now
+            modbus_expect_execution(@writer, @reader) do
+                modbus_set(49, 1)
+                modbus_set(6, 3)
+            end.to do
+                emit task.controller_fault_event
+            end
+
+            modbus_expect_execution(@writer, @reader).to do
+                not_emit task.controller_fault_event, within: 0.2
+            end
+
+            cmd = Types.base.samples.Joints.new(
+                elements: [Types.base.JointState.Speed(1000 * 2 * Math::PI / 60)]
+            )
+            modbus_expect_execution(@writer, @reader) do
+                syskit_write task.cmd_in_port, cmd
+            end.to do
+                emit task.controller_fault_event
+            end
         end
     end
 
