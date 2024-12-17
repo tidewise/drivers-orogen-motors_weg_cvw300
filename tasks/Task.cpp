@@ -161,7 +161,7 @@ void Task::publishFault()
 }
 void Task::updateHook()
 {
-    while (_cmd_in.read(m_cmd_in) == RTT::NewData) {
+    if (_cmd_in.read(m_cmd_in) == RTT::NewData) {
         if (m_cmd_in.elements.size() != 1) {
             return exception(INVALID_COMMAND_SIZE);
         }
