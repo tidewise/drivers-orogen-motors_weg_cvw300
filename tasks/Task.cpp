@@ -161,6 +161,8 @@ void Task::publishFault()
 }
 void Task::updateHook()
 {
+    TaskBase::updateHook();
+
     if (_cmd_in.read(m_cmd_in) == RTT::NewData) {
         if (m_cmd_in.elements.size() != 1) {
             return exception(INVALID_COMMAND_SIZE);
@@ -185,8 +187,6 @@ void Task::updateHook()
 
     auto state = readAndPublishControllerStates();
     evaluateInverterStatus(state.inverter_status);
-
-    TaskBase::updateHook();
 }
 void Task::processIO()
 {
