@@ -15,6 +15,7 @@ import_types_from "motors_weg_cvw300Types.hpp"
 using_task_library "iodrivers_base"
 using_library "control_base"
 import_types_from "control_base"
+import_types_from "linux_gpios"
 
 task_context "Task", subclasses: "iodrivers_base::Task" do
     needs_configuration
@@ -93,4 +94,29 @@ task_context "Task", subclasses: "iodrivers_base::Task" do
     # There's no data coming from the controller without the driver requesting
     # it first ... Must be periodic.
     periodic 0.1
+end
+
+task_context "ContactorFaultResetTask" do
+    needs_configuration
+
+    # Waiting time between disable the gpio_propulsion and enable it again.
+    property "propulsion_disabled_duration", "/base/Time"
+    # Number of attempts to try changing the contactor fault F185 to the external fault
+    # F91
+    property "number_of_attempts_to_change_controller_failure", "int"
+
+    # Port motor controller fault state
+    input_port "port_fault_state", "/motors_weg_cvw300/FaultState"
+    # Starboard motor controller fault state
+    input_port "starboard_fault_state", "/motors_weg_cvw300/FaultState"
+    # Current gpio_propulsion_enable state
+    input_port "propulsion_enable_in", "/linux_gpios/GPIOState"
+    # Signal to control the gpio_propulsion_enable when the motor controller is reporting
+    # contactor fault
+    output_port "propulsion_enable_out", "/linux_gpios/GPIOState"
+    # Signal to control the gpio_motor_controller_fault_reset_enable when the motor
+    # controller is still reporting contactor fault
+    output_port "motor_controller_fault_reset_enable", "/linux_gpios/GPIOState"
+
+    port_driven
 end
