@@ -75,6 +75,7 @@ bool Task::configureHook()
     m_sample.elements.resize(1);
 
     m_inverted = _inverted.get();
+    m_edge_triggered_fault_state_output = _edge_triggered_fault_state_output.get();
 
     m_driver = move(driver);
     guard.commit();
@@ -185,6 +186,9 @@ void Task::updateHook()
         writeSpeedCommand(0);
     }
 
+    if (!m_edge_triggered_fault_state_output) {
+        publishFault();
+    }
     auto state = readAndPublishControllerStates();
     evaluateInverterStatus(state.inverter_status);
 }
