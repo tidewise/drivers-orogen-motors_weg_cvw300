@@ -41,6 +41,7 @@ namespace motors_weg_cvw300 {
         std::unique_ptr<Driver> m_driver;
 
         bool m_inverted;
+        bool m_edge_triggered_fault_state_output;
 
         void writeSpeedCommand(float cmd);
         bool commandTimedOut() const;

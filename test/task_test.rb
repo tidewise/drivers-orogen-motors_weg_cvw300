@@ -173,6 +173,10 @@ describe OroGen.motors_weg_cvw300.Task do
     end
 
     describe "fault and alarm reporting" do
+        before do
+            @task.properties.edge_triggered_fault_state_output = true
+        end
+
         it "does not output on the fault_state port if there is no alarm or fault " do
             modbus_configure_and_start
             expect_execution.timeout(1).to do
@@ -411,6 +415,40 @@ describe OroGen.motors_weg_cvw300.Task do
                 syskit_write task.cmd_in_port, cmd
             end.to do
                 emit task.controller_fault_event
+            end
+        end
+    end
+
+    describe "edge_triggered_fault_state_output = false" do
+        before do
+            @task.properties.edge_triggered_fault_state_output = false
+        end
+
+        it "outputs the fault state while in all states" do
+            modbus_configure_and_start
+
+            modbus_expect_execution(@writer, @reader) do
+                modbus_set(49, 1)
+                modbus_set(6, 2)
+            end.to do
+                emit task.controller_under_voltage_event
+                have_one_new_sample task.fault_state_port
+            end
+
+            modbus_expect_execution(@writer, @reader) do
+                modbus_set(49, 0)
+                modbus_set(6, 1)
+            end.to do
+                emit task.running_event
+                have_one_new_sample task.fault_state_port
+            end
+
+            modbus_expect_execution(@writer, @reader) do
+                modbus_set(49, 1)
+                modbus_set(6, 3)
+            end.to do
+                emit task.controller_fault_event
+                have_one_new_sample task.fault_state_port
             end
         end
     end

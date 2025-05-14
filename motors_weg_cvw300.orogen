@@ -71,6 +71,12 @@ task_context "Task", subclasses: "iodrivers_base::Task" do
     property "registers_configuration",
              "/std/vector</motors_weg_cvw300/configuration/MotorRegister>"
 
+    # Edge trigger the fault_state output port
+    #
+    # When set as true, it just reports the fault state when it happens in the controller.
+    # When set as false, it reports the fault state periodically.
+    property "edge_triggered_fault_state_output", "/bool", true
+
     # Input command
     #
     # Only set the speed field
