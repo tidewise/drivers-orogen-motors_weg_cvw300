@@ -110,8 +110,7 @@ task_context "SimulationTask" do
     property "joint_name", "/std/string"
 
     # Make the component actively send a zero velocity command if no command
-    # is received within the watchdog timeout. It must be multiplet of the :timeout
-    # port driven property
+    # is received within the watchdog timeout
     #
     # Set the watchdog timer to zero to disable
     property "watchdog_timeout", "/base/Time"
@@ -132,5 +131,5 @@ task_context "SimulationTask" do
     exception_states :INVALID_COMMAND_SIZE, :INVALID_COMMAND_PARAMETER,
                      :INVALID_JOINT_NAME
 
-    port_driven timeout: 1
+    periodic 0.1
 end
