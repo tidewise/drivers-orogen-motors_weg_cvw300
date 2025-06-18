@@ -2,6 +2,8 @@
 
 name "motors_weg_cvw300"
 
+cxx_standard "c++17"
+
 import_types_from "std"
 import_types_from "base"
 
@@ -99,4 +101,36 @@ task_context "Task", subclasses: "iodrivers_base::Task" do
     # There's no data coming from the controller without the driver requesting
     # it first ... Must be periodic.
     periodic 0.1
+end
+
+task_context "SimulationTask" do
+    needs_configuration
+
+    # The controlled joint name at the sdf file
+    property "joint_name", "/std/string"
+
+    # Make the component actively send a zero velocity command if no command
+    # is received within the watchdog timeout. It must be multiplet of the :timeout
+    # port driven property
+    #
+    # Set the watchdog timer to zero to disable
+    property "watchdog_timeout", "/base/Time"
+
+    # Control limits
+    property "limits", "/base/JointLimits"
+
+    # Input command
+    #
+    # type: Speed
+    input_port "cmd_in", "/base/samples/Joints"
+
+    # Forwarded input command when in nominal operation
+    output_port "cmd_out", "/base/samples/Joints"
+
+    output_port "saturation_signal", "/control_base/SaturationSignal"
+
+    exception_states :INVALID_COMMAND_SIZE, :INVALID_COMMAND_PARAMETER,
+                     :INVALID_JOINT_NAME
+
+    port_driven timeout: 1
 end
