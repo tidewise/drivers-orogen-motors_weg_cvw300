@@ -29,13 +29,41 @@ namespace motors_weg_cvw300 {
         friend class SimulationTaskBase;
 
     protected:
+        // begin component properties
         std::string m_joint_name;
         base::JointLimits m_limits;
         base::Time m_watchdog_timeout;
+        bool m_edge_triggered_fault_state_output;
+        // end component properties
+
+        bool m_external_fault;
         base::Time m_cmd_deadline;
+
         base::samples::Joints m_zero_command;
 
+        /**
+         * placeholder for the last command written in cmd_out port
+         */
+        base::samples::Joints m_last_command_out;
+
         void updateWatchdog();
+
+        void writeCommandOut(base::samples::Joints const& cmd);
+
+        InverterStatus inverterStatus() const;
+
+        std::uint16_t currentFault() const;
+
+        void publishFault();
+
+        InverterState currentState() const;
+
+        /**
+         * reads external_fault_gpio port and updated m_external_fault
+         */
+        void readExternalFaultGPIOState();
+
+        void evaluateInverterStatus(InverterStatus status);
 
     public:
         bool validateCommand(base::samples::Joints cmd,
