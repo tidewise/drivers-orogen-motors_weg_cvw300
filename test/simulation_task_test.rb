@@ -168,6 +168,21 @@ describe OroGen.motors_weg_cvw300.SimulationTask do
         end
     end
 
+    describe "error" do
+        it "keeps publishing fault and inverter state while on errorHook" do
+            syskit_configure_and_start(task)
+            expect_execution do
+                syskit_write task.external_fault_gpio_port, propulsion_enable(false)
+            end.to_emit task.controller_fault_event
+
+            expect_execution.to do
+                have_new_samples task.inverter_state_port, 5
+                have_new_samples task.fault_state_port, 5
+                maintain(at_least_during: 1) { task.orogen_state == :CONTROLLER_FAULT }
+            end
+        end
+    end
+
     describe "fault reporting" do
         it "does not output on the fault_state port if there is no fault " do
             syskit_configure_and_start(task)

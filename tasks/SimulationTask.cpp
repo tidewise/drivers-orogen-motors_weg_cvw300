@@ -223,6 +223,7 @@ void SimulationTask::errorHook()
     publishFault();
 
     readExternalFaultGPIOState();
+    _inverter_state.write(currentState());
 
     writeCommandOut(zeroCommand());
     if (inverterStatus() != InverterStatus::STATUS_FAULT) {
