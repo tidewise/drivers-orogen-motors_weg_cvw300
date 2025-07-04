@@ -6,6 +6,11 @@
 
 using namespace motors_weg_cvw300;
 
+enum Fault {
+    NO_FAULT = 0,
+    EXTERNAL_FAULT = 91
+};
+
 base::samples::Joints speedCommand(float cmd, std::string const& joint_name);
 control_base::SaturationSignal saturationSignal(bool saturation);
 
@@ -26,6 +31,7 @@ bool SimulationTask::configureHook()
 
     m_limits = _limits.get();
     m_watchdog_timeout = _watchdog_timeout.get();
+    m_edge_triggered_fault_state_output = _edge_triggered_fault_state_output.get();
 
     if (_joint_name.get() == "") {
         throw std::runtime_error("joint_name property must be set");
@@ -36,13 +42,30 @@ bool SimulationTask::configureHook()
 
     return true;
 }
+
+base::samples::Joints speedCommand(float cmd, std::string const& joint_name)
+{
+    base::samples::Joints speed_cmd;
+    speed_cmd.elements.resize(1);
+    speed_cmd.names.resize(1);
+
+    speed_cmd.time = base::Time::now();
+    speed_cmd.elements[0].setField(base::JointState::SPEED, cmd);
+    speed_cmd.names[0] = joint_name;
+
+    return speed_cmd;
+}
+
 bool SimulationTask::startHook()
 {
     if (!SimulationTaskBase::startHook()) {
         return false;
     }
+    m_external_fault = false;
+
     updateWatchdog();
-    _cmd_out.write(zeroCommand());
+    writeCommandOut(zeroCommand());
+    publishFault();
     return true;
 }
 
@@ -56,19 +79,57 @@ void SimulationTask::updateWatchdog()
     }
 }
 
+void SimulationTask::writeCommandOut(base::samples::Joints const& cmd)
+{
+    if (inverterStatus() != InverterStatus::STATUS_FAULT) {
+        _cmd_out.write(m_last_command_out = cmd);
+    }
+    else {
+        _cmd_out.write(m_last_command_out = zeroCommand());
+    }
+}
+
 base::samples::Joints const& SimulationTask::zeroCommand()
 {
     m_zero_command.time = base::Time::now();
     return m_zero_command;
 }
 
+InverterStatus SimulationTask::inverterStatus() const
+{
+    if (currentFault() == Fault::EXTERNAL_FAULT) {
+        return InverterStatus::STATUS_FAULT;
+    }
+
+    if (m_last_command_out.elements.size() && m_last_command_out.elements[0].speed != 0) {
+        return InverterStatus::STATUS_RUN;
+    }
+
+    return InverterStatus::STATUS_READY;
+}
+
+std::uint16_t SimulationTask::currentFault() const
+{
+    if (m_external_fault) {
+        return Fault::EXTERNAL_FAULT;
+    }
+
+    return Fault::NO_FAULT;
+}
+
+void SimulationTask::publishFault()
+{
+    FaultState fault;
+    fault.current_fault = currentFault();
+    fault.fault_history[0] = fault.current_fault;
+
+    fault.time = base::Time::now();
+    _fault_state.write(fault);
+}
+
 void SimulationTask::updateHook()
 {
     SimulationTaskBase::updateHook();
-
-    if (!m_cmd_deadline.isNull() && base::Time::now() > m_cmd_deadline) {
-        _cmd_out.write(zeroCommand());
-    }
 
     base::samples::Joints cmd_in;
     if (_cmd_in.read(cmd_in) == RTT::NewData) {
@@ -83,8 +144,23 @@ void SimulationTask::updateHook()
         cmd_out.time = base::Time::now();
 
         _saturation_signal.write(saturationSignal(saturated));
-        _cmd_out.write(cmd_out);
+        writeCommandOut(cmd_out);
     }
+
+    if (!m_cmd_deadline.isNull() && base::Time::now() > m_cmd_deadline) {
+        writeCommandOut(zeroCommand());
+    }
+
+    if (!m_edge_triggered_fault_state_output) {
+        publishFault();
+    }
+
+    readExternalFaultGPIOState();
+
+    InverterState state = currentState();
+    _inverter_state.write(state);
+
+    evaluateInverterStatus(state.inverter_status);
 }
 
 bool SimulationTask::validateCommand(base::samples::Joints cmd,
@@ -117,22 +193,44 @@ control_base::SaturationSignal saturationSignal(bool saturation)
     return signal;
 }
 
-base::samples::Joints speedCommand(float cmd, std::string const& joint_name)
+void SimulationTask::readExternalFaultGPIOState()
 {
-    base::samples::Joints speed_cmd;
-    speed_cmd.elements.resize(1);
-    speed_cmd.names.resize(1);
-
-    speed_cmd.time = base::Time::now();
-    speed_cmd.elements[0].setField(base::JointState::SPEED, cmd);
-    speed_cmd.names[0] = joint_name;
-
-    return speed_cmd;
+    linux_gpios::GPIOState estop;
+    if (_external_fault_gpio.read(estop) == RTT::NewData) {
+        m_external_fault = !estop.states[0].data;
+    }
 }
+
+InverterState SimulationTask::currentState() const
+{
+    InverterState state;
+    state.inverter_status = inverterStatus();
+    state.time = base::Time::now();
+
+    return state;
+}
+
+void SimulationTask::evaluateInverterStatus(InverterStatus status)
+{
+    if (status == InverterStatus::STATUS_FAULT) {
+        error(CONTROLLER_FAULT);
+    }
+}
+
 void SimulationTask::errorHook()
 {
     SimulationTaskBase::errorHook();
+    publishFault();
+
+    readExternalFaultGPIOState();
+    _inverter_state.write(currentState());
+
+    writeCommandOut(zeroCommand());
+    if (inverterStatus() != InverterStatus::STATUS_FAULT) {
+        recover();
+    }
 }
+
 void SimulationTask::stopHook()
 {
     SimulationTaskBase::stopHook();

@@ -17,6 +17,7 @@ import_types_from "motors_weg_cvw300Types.hpp"
 using_task_library "iodrivers_base"
 using_library "control_base"
 import_types_from "control_base"
+import_types_from "linux_gpios"
 
 task_context "Task", subclasses: "iodrivers_base::Task" do
     needs_configuration
@@ -118,6 +119,14 @@ task_context "SimulationTask" do
     # Control limits
     property "limits", "/base/JointLimits"
 
+    # Edge trigger the fault_state output port
+    #
+    # When set as true, it just reports the fault state when it happens in the controller.
+    # When set as false, it reports the fault state periodically.
+    property "edge_triggered_fault_state_output", "/bool", true
+
+    input_port "external_fault_gpio", "/linux_gpios/GPIOState"
+
     # Input command
     #
     # type: Speed
@@ -126,7 +135,13 @@ task_context "SimulationTask" do
     # Forwarded input command when in nominal operation
     output_port "cmd_out", "/base/samples/Joints"
 
+    output_port "inverter_state", "/motors_weg_cvw300/InverterState"
+
+    output_port "fault_state", "/motors_weg_cvw300/FaultState"
+
     output_port "saturation_signal", "/control_base/SaturationSignal"
+
+    error_states :CONTROLLER_FAULT
 
     exception_states :INVALID_COMMAND_SIZE, :INVALID_COMMAND_PARAMETER,
                      :INVALID_JOINT_NAME
