@@ -216,9 +216,9 @@ control_base::SaturationSignal saturationSignal(bool saturation)
 
 void SimulationTask::readExternalFaultGPIOState()
 {
-    linux_gpios::GPIOState estop;
-    if (_external_fault_gpio.read(estop) == RTT::NewData) {
-        m_external_fault = !estop.states[0].data;
+    linux_gpios::GPIOState propulsion_enable;
+    if (_external_fault_gpio.read(propulsion_enable) == RTT::NewData) {
+        m_external_fault = !propulsion_enable.states[0].data;
     }
 }
 
