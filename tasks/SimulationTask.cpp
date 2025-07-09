@@ -3,16 +3,19 @@
 #include "SimulationTask.hpp"
 
 #include <control_base/SaturationSignal.hpp>
+#include <random>
 
 using namespace motors_weg_cvw300;
 
 enum Fault {
     NO_FAULT = 0,
-    EXTERNAL_FAULT = 91
+    EXTERNAL_FAULT = 91,
+    CONTACTOR_FAULT = 185
 };
 
 base::samples::Joints speedCommand(float cmd, std::string const& joint_name);
 control_base::SaturationSignal saturationSignal(bool saturation);
+bool rollProbability(double probability);
 
 SimulationTask::SimulationTask(std::string const& name)
     : SimulationTaskBase(name)
@@ -32,13 +35,12 @@ bool SimulationTask::configureHook()
     m_limits = _limits.get();
     m_watchdog_timeout = _watchdog_timeout.get();
     m_edge_triggered_fault_state_output = _edge_triggered_fault_state_output.get();
-
     if (_joint_name.get() == "") {
         throw std::runtime_error("joint_name property must be set");
     }
     m_joint_name = _joint_name.get();
-
     m_zero_command = speedCommand(0, m_joint_name);
+    m_contactor_fault_probabilities = _contactor_fault_probabilities.get();
 
     return true;
 }
@@ -110,10 +112,12 @@ InverterStatus SimulationTask::inverterStatus() const
 
 std::uint16_t SimulationTask::currentFault() const
 {
+    if (m_contactor_fault) {
+        return Fault::CONTACTOR_FAULT;
+    }
     if (m_external_fault) {
         return Fault::EXTERNAL_FAULT;
     }
-
     return Fault::NO_FAULT;
 }
 
@@ -156,12 +160,29 @@ void SimulationTask::updateHook()
     }
 
     readExternalFaultGPIOState();
+    triggerContactorFaultIfRollPasses();
 
     InverterState state = currentState();
     _inverter_state.write(state);
 
     evaluateInverterStatus(state.inverter_status);
 }
+
+void SimulationTask::triggerContactorFaultIfRollPasses()
+{
+    if (!m_contactor_fault && rollProbability(m_contactor_fault_probabilities.trigger)) {
+        m_contactor_fault = true;
+    }
+}
+
+bool rollProbability(double probability)
+{
+    std::random_device random_device;
+    std::mt19937 generator(random_device());
+    std::bernoulli_distribution distribution(probability);
+    return distribution(generator);
+}
+
 
 bool SimulationTask::validateCommand(base::samples::Joints cmd,
     SimulationTask::States& command_exception) const

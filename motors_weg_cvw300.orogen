@@ -107,6 +107,8 @@ end
 task_context "SimulationTask" do
     needs_configuration
 
+    property "contactor_fault_probabilities", "/motors_weg_cvw300/ContactorFaultProbabilities"
+
     # The controlled joint name at the sdf file
     property "joint_name", "/std/string"
 

@@ -37,6 +37,8 @@ namespace motors_weg_cvw300 {
         // end component properties
 
         bool m_external_fault;
+        bool m_contactor_fault;
+        ContactorFaultProbabilities m_contactor_fault_probabilities;
         base::Time m_cmd_deadline;
 
         base::samples::Joints m_zero_command;
@@ -45,6 +47,8 @@ namespace motors_weg_cvw300 {
          * placeholder for the last command written in cmd_out port
          */
         base::samples::Joints m_last_command_out;
+
+        void triggerContactorFaultIfRollPasses();
 
         void updateWatchdog();
 
