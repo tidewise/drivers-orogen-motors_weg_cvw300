@@ -52,10 +52,7 @@ namespace motors_weg_cvw300 {
          * @brief The probability to reset the fault with a soft reset
          */
         double soft_reset_sucess = base::unknown<double>();
-        /**
-         * @brief The probability to reset the fault with a hard reset
-         */
-        double hard_reset_sucess = base::unknown<double>();
+    };
     };
 
 }
