@@ -6,12 +6,7 @@
 #include <random>
 
 using namespace motors_weg_cvw300;
-
-enum Fault {
-    NO_FAULT = 0,
-    EXTERNAL_FAULT = 91,
-    CONTACTOR_FAULT = 185
-};
+using namespace std;
 
 base::samples::Joints speedCommand(float cmd, std::string const& joint_name);
 control_base::SaturationSignal saturationSignal(bool saturation);
@@ -63,7 +58,7 @@ bool SimulationTask::startHook()
     if (!SimulationTaskBase::startHook()) {
         return false;
     }
-    m_external_fault = false;
+    m_current_fault_state = Fault::NO_FAULT;
 
     updateWatchdog();
     writeCommandOut(zeroCommand());
@@ -99,7 +94,9 @@ base::samples::Joints const& SimulationTask::zeroCommand()
 
 InverterStatus SimulationTask::inverterStatus() const
 {
-    if (currentFault() == Fault::EXTERNAL_FAULT) {
+    if (m_current_fault_state == Fault::EXTERNAL_FAULT ||
+        // TODO: I'm not sure if i should add the following condition
+        m_current_fault_state == Fault::CONTACTOR_FAULT) {
         return InverterStatus::STATUS_FAULT;
     }
 
@@ -110,21 +107,10 @@ InverterStatus SimulationTask::inverterStatus() const
     return InverterStatus::STATUS_READY;
 }
 
-std::uint16_t SimulationTask::currentFault() const
-{
-    if (m_contactor_fault) {
-        return Fault::CONTACTOR_FAULT;
-    }
-    if (m_external_fault) {
-        return Fault::EXTERNAL_FAULT;
-    }
-    return Fault::NO_FAULT;
-}
-
 void SimulationTask::publishFault()
 {
     FaultState fault;
-    fault.current_fault = currentFault();
+    fault.current_fault = m_current_fault_state;
     fault.fault_history[0] = fault.current_fault;
 
     fault.time = base::Time::now();
@@ -160,7 +146,7 @@ void SimulationTask::updateHook()
     }
 
     readExternalFaultGPIOState();
-    triggerContactorFaultIfRollPasses();
+    possiblyTriggerContactorFault();
 
     InverterState state = currentState();
     _inverter_state.write(state);
@@ -168,21 +154,21 @@ void SimulationTask::updateHook()
     evaluateInverterStatus(state.inverter_status);
 }
 
-void SimulationTask::triggerContactorFaultIfRollPasses()
+void SimulationTask::possiblyTriggerContactorFault()
 {
-    if (!m_contactor_fault && rollProbability(m_contactor_fault_probabilities.trigger)) {
-        m_contactor_fault = true;
+    if (m_current_fault_state == Fault::NO_FAULT &&
+        rollProbability(m_contactor_fault_probabilities.trigger)) {
+        m_current_fault_state = Fault::NO_FAULT;
     }
 }
 
 bool rollProbability(double probability)
 {
-    std::random_device random_device;
-    std::mt19937 generator(random_device());
-    std::bernoulli_distribution distribution(probability);
+    random_device random_device;
+    mt19937 generator(random_device());
+    bernoulli_distribution distribution(probability);
     return distribution(generator);
 }
-
 
 bool SimulationTask::validateCommand(base::samples::Joints cmd,
     SimulationTask::States& command_exception) const
@@ -218,7 +204,29 @@ void SimulationTask::readExternalFaultGPIOState()
 {
     linux_gpios::GPIOState propulsion_enable;
     if (_external_fault_gpio.read(propulsion_enable) == RTT::NewData) {
-        m_external_fault = !propulsion_enable.states[0].data;
+        updateFaultState(propulsion_enable.states[0].data);
+    }
+}
+
+void SimulationTask::updateFaultState(bool gpio_propulsion_enable_value)
+{
+    if (m_current_fault_state == Fault::CONTACTOR_FAULT &&
+        !gpio_propulsion_enable_value) {
+        attemptToSoftReset();
+        return;
+    }
+    if (gpio_propulsion_enable_value) {
+        m_current_fault_state = Fault::NO_FAULT;
+    }
+    else {
+        m_current_fault_state = Fault::EXTERNAL_FAULT;
+    }
+}
+
+void SimulationTask::attemptToSoftReset()
+{
+    if (rollProbability(m_contactor_fault_probabilities.soft_reset_sucess)) {
+        m_current_fault_state = Fault::EXTERNAL_FAULT;
     }
 }
 

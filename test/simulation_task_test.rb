@@ -9,6 +9,7 @@ describe OroGen.motors_weg_cvw300.SimulationTask do
         @task = syskit_deploy(
             OroGen.motors_weg_cvw300.SimulationTask
                   .deployed_as("test_task")
+                #   .deployed_as_unmanaged("test_task")
         )
 
         @task.properties.limits = Types.base.JointLimits.new(
@@ -19,6 +20,11 @@ describe OroGen.motors_weg_cvw300.SimulationTask do
             }]
         )
         @task.properties.joint_name = "joint"
+        @task.properties.contactor_fault_probabilities =
+            Types.motors_weg_cvw300.ContactorFaultProbabilities.new(
+                trigger: 0,
+                soft_reset_sucess: 0
+            )
     end
 
     describe "configure" do

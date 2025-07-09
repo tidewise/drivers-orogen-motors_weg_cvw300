@@ -36,8 +36,7 @@ namespace motors_weg_cvw300 {
         bool m_edge_triggered_fault_state_output;
         // end component properties
 
-        bool m_external_fault;
-        bool m_contactor_fault;
+        Fault m_current_fault_state;
         ContactorFaultProbabilities m_contactor_fault_probabilities;
         base::Time m_cmd_deadline;
 
@@ -48,15 +47,17 @@ namespace motors_weg_cvw300 {
          */
         base::samples::Joints m_last_command_out;
 
-        void triggerContactorFaultIfRollPasses();
+        void updateFaultState(bool gpio_propulsion_enable_value);
+
+        void possiblyTriggerContactorFault();
+
+        void attemptToSoftReset();
 
         void updateWatchdog();
 
         void writeCommandOut(base::samples::Joints const& cmd);
 
         InverterStatus inverterStatus() const;
-
-        std::uint16_t currentFault() const;
 
         void publishFault();
 

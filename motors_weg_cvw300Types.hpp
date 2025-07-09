@@ -39,7 +39,7 @@ namespace motors_weg_cvw300 {
     };
 
     /**
-     * @brief The probabilities associated to the simulation of the contactor fault emission
+     * @brief The probabilities associated to the simulation of the contactor fault
      *
      * Each value must be between 0 and 1
      */
@@ -53,6 +53,11 @@ namespace motors_weg_cvw300 {
          */
         double soft_reset_sucess = base::unknown<double>();
     };
+
+    enum Fault {
+        NO_FAULT = 0,
+        EXTERNAL_FAULT = 91,
+        CONTACTOR_FAULT = 185
     };
 
 }
