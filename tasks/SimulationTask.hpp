@@ -50,11 +50,13 @@ namespace motors_weg_cvw300 {
 
         std::mt19937 m_distribution_generator;
 
-        void updateFaultState(bool gpio_propulsion_enable_value);
+        bool m_external_fault;
 
-        void possiblyTriggerContactorFault();
+        void updateFaultState();
 
-        void attemptToSoftReset();
+        bool triggerContactorFault();
+
+        bool exitContactorFault();
 
         void updateWatchdog();
 

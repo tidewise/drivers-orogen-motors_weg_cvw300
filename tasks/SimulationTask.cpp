@@ -58,6 +58,7 @@ bool SimulationTask::startHook()
         return false;
     }
     m_current_fault_state = Fault::NO_FAULT;
+    m_external_fault = false;
 
     updateWatchdog();
     writeCommandOut(zeroCommand());
@@ -94,7 +95,6 @@ base::samples::Joints const& SimulationTask::zeroCommand()
 InverterStatus SimulationTask::inverterStatus() const
 {
     if (m_current_fault_state == Fault::EXTERNAL_FAULT ||
-        // TODO: I'm not sure if i should add the following condition
         m_current_fault_state == Fault::CONTACTOR_FAULT) {
         return InverterStatus::STATUS_FAULT;
     }
@@ -143,11 +143,10 @@ void SimulationTask::updateHook()
     if (!m_edge_triggered_fault_state_output) {
         publishFault();
     }
-
     readExternalFaultGPIOState();
+    updateFaultState();
     readPortPowerDisableGPIOState();
     readStarboardPowerDisableGPIOState();
-    possiblyTriggerContactorFault();
 
     InverterState state = currentState();
     _inverter_state.write(state);
@@ -155,12 +154,9 @@ void SimulationTask::updateHook()
     evaluateInverterStatus(state.inverter_status);
 }
 
-void SimulationTask::possiblyTriggerContactorFault()
+bool SimulationTask::triggerContactorFault()
 {
-    if (m_current_fault_state == Fault::NO_FAULT &&
-        rollProbability(m_contactor_fault_probabilities.trigger)) {
-        m_current_fault_state = Fault::CONTACTOR_FAULT;
-    }
+    return rollProbability(m_contactor_fault_probabilities.trigger);
 }
 
 bool SimulationTask::rollProbability(double probability)
@@ -201,32 +197,40 @@ control_base::SaturationSignal saturationSignal(bool saturation)
 
 void SimulationTask::readExternalFaultGPIOState()
 {
-    linux_gpios::GPIOState propulsion_enable;
-    if (_external_fault_gpio.read(propulsion_enable) == RTT::NewData) {
-        updateFaultState(propulsion_enable.states[0].data);
+    linux_gpios::GPIOState external_fault_gpio;
+    if (_external_fault_gpio.read(external_fault_gpio) == RTT::NewData) {
+        m_external_fault = !external_fault_gpio.states[0].data;
     }
 }
 
-void SimulationTask::updateFaultState(bool gpio_propulsion_enable_value)
+void SimulationTask::updateFaultState()
 {
-    if (m_current_fault_state == Fault::CONTACTOR_FAULT &&
-        !gpio_propulsion_enable_value) {
-        attemptToSoftReset();
+    if (m_current_fault_state == Fault::CONTACTOR_FAULT && m_external_fault &&
+        exitContactorFault()) {
+        m_current_fault_state = Fault::EXTERNAL_FAULT;
         return;
     }
-    if (gpio_propulsion_enable_value) {
+    if (!m_external_fault && m_current_fault_state == Fault::EXTERNAL_FAULT &&
+        m_current_fault_state != Fault::CONTACTOR_FAULT) {
         m_current_fault_state = Fault::NO_FAULT;
+        return;
+    }
+    if (triggerContactorFault()) {
+        m_current_fault_state = Fault::CONTACTOR_FAULT;
+        return;
+    }
+    if (m_external_fault) {
+        m_current_fault_state = Fault::EXTERNAL_FAULT;
+        return;
     }
     else {
-        m_current_fault_state = Fault::EXTERNAL_FAULT;
+        m_current_fault_state = Fault::NO_FAULT;
     }
 }
 
-void SimulationTask::attemptToSoftReset()
+bool SimulationTask::exitContactorFault()
 {
-    if (rollProbability(m_contactor_fault_probabilities.break_on_external_fault)) {
-        m_current_fault_state = Fault::EXTERNAL_FAULT;
-    }
+    return rollProbability(m_contactor_fault_probabilities.break_on_external_fault);
 }
 
 void SimulationTask::readPortPowerDisableGPIOState()
@@ -274,6 +278,7 @@ void SimulationTask::errorHook()
     publishFault();
 
     readExternalFaultGPIOState();
+    updateFaultState();
     _inverter_state.write(currentState());
 
     writeCommandOut(zeroCommand());
