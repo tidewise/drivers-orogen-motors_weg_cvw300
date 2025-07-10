@@ -68,6 +68,12 @@ namespace motors_weg_cvw300 {
          */
         void readExternalFaultGPIOState();
 
+        void readStarboardPowerDisableGPIOState();
+
+        void readPortPowerDisableGPIOState();
+
+        void simulateHardReset();
+
         void evaluateInverterStatus(InverterStatus status);
 
     public:

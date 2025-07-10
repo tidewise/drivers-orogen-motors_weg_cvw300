@@ -129,6 +129,10 @@ task_context "SimulationTask" do
 
     input_port "external_fault_gpio", "/linux_gpios/GPIOState"
 
+    input_port "port_power_disable_gpio", "/linux_gpios/GPIOState"
+
+    input_port "starboard_power_disable_gpio", "/linux_gpios/GPIOState"
+
     # Input command
     #
     # type: Speed
@@ -146,7 +150,7 @@ task_context "SimulationTask" do
     error_states :CONTROLLER_FAULT
 
     exception_states :INVALID_COMMAND_SIZE, :INVALID_COMMAND_PARAMETER,
-                     :INVALID_JOINT_NAME
+                     :INVALID_JOINT_NAME, :IO_TIMEOUT
 
     periodic 0.1
 end

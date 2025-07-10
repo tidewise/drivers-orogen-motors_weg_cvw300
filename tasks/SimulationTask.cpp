@@ -146,6 +146,8 @@ void SimulationTask::updateHook()
     }
 
     readExternalFaultGPIOState();
+    readPortPowerDisableGPIOState();
+    readStarboardPowerDisableGPIOState();
     possiblyTriggerContactorFault();
 
     InverterState state = currentState();
@@ -228,6 +230,29 @@ void SimulationTask::attemptToSoftReset()
     if (rollProbability(m_contactor_fault_probabilities.soft_reset_sucess)) {
         m_current_fault_state = Fault::EXTERNAL_FAULT;
     }
+}
+
+void SimulationTask::readPortPowerDisableGPIOState()
+{
+    linux_gpios::GPIOState port_power_disable;
+    if (_port_power_disable_gpio.read(port_power_disable) == RTT::NewData &&
+        port_power_disable.states[0].data) {
+        simulateHardReset();
+    }
+}
+
+void SimulationTask::readStarboardPowerDisableGPIOState()
+{
+    linux_gpios::GPIOState starboard_power_disable;
+    if (_starboard_power_disable_gpio.read(starboard_power_disable) == RTT::NewData &&
+        starboard_power_disable.states[0].data) {
+        simulateHardReset();
+    }
+}
+
+void SimulationTask::simulateHardReset()
+{
+    return exception(IO_TIMEOUT);
 }
 
 InverterState SimulationTask::currentState() const
