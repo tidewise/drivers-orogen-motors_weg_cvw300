@@ -224,7 +224,7 @@ void SimulationTask::updateFaultState(bool gpio_propulsion_enable_value)
 
 void SimulationTask::attemptToSoftReset()
 {
-    if (rollProbability(m_contactor_fault_probabilities.soft_reset_sucess)) {
+    if (rollProbability(m_contactor_fault_probabilities.break_on_external_fault)) {
         m_current_fault_state = Fault::EXTERNAL_FAULT;
     }
 }

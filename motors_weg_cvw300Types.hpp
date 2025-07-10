@@ -49,9 +49,9 @@ namespace motors_weg_cvw300 {
          */
         double trigger = base::unknown<double>();
         /**
-         * @brief The probability to reset the fault with a soft reset
+         * @brief The probability of the external fault break the current contactor fault
          */
-        double soft_reset_sucess = base::unknown<double>();
+        double break_on_external_fault = base::unknown<double>();
     };
 
     enum Fault {

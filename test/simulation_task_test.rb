@@ -22,7 +22,7 @@ describe OroGen.motors_weg_cvw300.SimulationTask do
         @task.properties.contactor_fault_probabilities =
             Types.motors_weg_cvw300.ContactorFaultProbabilities.new(
                 trigger: 0,
-                soft_reset_sucess: 0
+                break_on_external_fault: 0
             )
     end
 
@@ -170,7 +170,7 @@ describe OroGen.motors_weg_cvw300.SimulationTask do
             @task.properties.contactor_fault_probabilities =
             Types.motors_weg_cvw300.ContactorFaultProbabilities.new(
                 trigger: 100,
-                soft_reset_sucess: 0
+                break_on_external_fault: 0
             )
             syskit_configure_and_start(task)
 
@@ -255,7 +255,7 @@ describe OroGen.motors_weg_cvw300.SimulationTask do
             @task.properties.contactor_fault_probabilities =
                 Types.motors_weg_cvw300.ContactorFaultProbabilities.new(
                     trigger: 100,
-                    soft_reset_sucess: 0
+                    break_on_external_fault: 0
                 )
             syskit_configure(task)
             expect_execution { task.start! }
@@ -271,7 +271,7 @@ describe OroGen.motors_weg_cvw300.SimulationTask do
             @task.properties.contactor_fault_probabilities =
                 Types.motors_weg_cvw300.ContactorFaultProbabilities.new(
                     trigger: 100,
-                    soft_reset_sucess: 100
+                    break_on_external_fault: 100
                 )
             syskit_configure_and_start(task)
             expect_execution.to do
