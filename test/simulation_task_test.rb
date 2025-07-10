@@ -163,7 +163,7 @@ describe OroGen.motors_weg_cvw300.SimulationTask do
                 .to_not_emit task.controller_fault_event
 
             expect_execution do
-                syskit_write task.external_fault_gpio_port, propulsion_enable(false)
+                syskit_write task.external_fault_gpio_port, gpio_state(false)
             end.to_emit task.controller_fault_event
         end
 
@@ -178,7 +178,7 @@ describe OroGen.motors_weg_cvw300.SimulationTask do
         it "keeps publishing fault and inverter state while on errorHook" do
             syskit_configure_and_start(task)
             expect_execution do
-                syskit_write task.external_fault_gpio_port, propulsion_enable(false)
+                syskit_write task.external_fault_gpio_port, gpio_state(false)
             end.to_emit task.controller_fault_event
 
             expect_execution.to do
@@ -200,7 +200,7 @@ describe OroGen.motors_weg_cvw300.SimulationTask do
             syskit_configure_and_start(task)
 
             fault, state = expect_execution do
-                syskit_write task.external_fault_gpio_port, propulsion_enable(false)
+                syskit_write task.external_fault_gpio_port, gpio_state(false)
             end.to do
                 emit task.controller_fault_event
                 [
@@ -217,11 +217,11 @@ describe OroGen.motors_weg_cvw300.SimulationTask do
            "gpio goes off" do
             syskit_configure_and_start(task)
             expect_execution do
-                syskit_write task.external_fault_gpio_port, propulsion_enable(false)
+                syskit_write task.external_fault_gpio_port, gpio_state(false)
             end.to_emit task.controller_fault_event
 
             expect_execution do
-                syskit_write task.external_fault_gpio_port, propulsion_enable(true)
+                syskit_write task.external_fault_gpio_port, gpio_state(true)
             end.to do
                 have_one_new_sample(task.inverter_state_port)
                     .matching { |s| s.inverter_status == :STATUS_READY }
@@ -233,18 +233,16 @@ describe OroGen.motors_weg_cvw300.SimulationTask do
            "inverter is in fault status" do
             syskit_configure_and_start(task)
             expect_execution do
-                syskit_write task.external_fault_gpio_port, propulsion_enable(false)
+                syskit_write task.external_fault_gpio_port, gpio_state(false)
             end.to_emit task.controller_fault_event
 
             cmd = expect_execution.to { have_new_samples(task.cmd_out_port, 5) }
             cmd.each { |s| assert_zero_cmd(s) }
         end
-    end
-
-    def propulsion_enable(enabled)
+    def gpio_state(value)
         Types.linux_gpios.GPIOState.new(
             states: [
-                Types.raw_io.Digital.new(data: enabled)
+                Types.raw_io.Digital.new(data: value)
             ]
         )
     end
