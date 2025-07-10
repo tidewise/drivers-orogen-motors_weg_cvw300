@@ -160,7 +160,7 @@ void SimulationTask::possiblyTriggerContactorFault()
 {
     if (m_current_fault_state == Fault::NO_FAULT &&
         rollProbability(m_contactor_fault_probabilities.trigger)) {
-        m_current_fault_state = Fault::NO_FAULT;
+        m_current_fault_state = Fault::CONTACTOR_FAULT;
     }
 }
 
