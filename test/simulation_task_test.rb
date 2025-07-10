@@ -9,7 +9,6 @@ describe OroGen.motors_weg_cvw300.SimulationTask do
         @task = syskit_deploy(
             OroGen.motors_weg_cvw300.SimulationTask
                   .deployed_as("test_task")
-                #   .deployed_as_unmanaged("test_task")
         )
 
         @task.properties.limits = Types.base.JointLimits.new(
@@ -167,6 +166,17 @@ describe OroGen.motors_weg_cvw300.SimulationTask do
             end.to_emit task.controller_fault_event
         end
 
+        it "transits to STATUS_FAULT when there is a contactor fault" do
+            @task.properties.contactor_fault_probabilities =
+            Types.motors_weg_cvw300.ContactorFaultProbabilities.new(
+                trigger: 100,
+                soft_reset_sucess: 0
+            )
+            syskit_configure_and_start(task)
+
+            expect_execution.to_emit task.controller_fault_event
+        end
+
         it "starts with STATUS_READY" do
             syskit_configure_and_start(task)
             state = expect_execution.to { have_one_new_sample task.inverter_state_port }
@@ -239,6 +249,74 @@ describe OroGen.motors_weg_cvw300.SimulationTask do
             cmd = expect_execution.to { have_new_samples(task.cmd_out_port, 5) }
             cmd.each { |s| assert_zero_cmd(s) }
         end
+
+        it "outputs a contactor fault and transits to STATUS_FAULT when there is a "\
+           "contactor fault" do
+            @task.properties.contactor_fault_probabilities =
+                Types.motors_weg_cvw300.ContactorFaultProbabilities.new(
+                    trigger: 100,
+                    soft_reset_sucess: 0
+                )
+            syskit_configure(task)
+            expect_execution { task.start! }
+            .to do
+                emit task.controller_fault_event
+                have_one_new_sample(task.inverter_state_port)
+                    .matching { |s| s.inverter_status == :STATUS_FAULT }
+            end
+        end
+
+        it "transits between error state and running state when the contactor fault " \
+           "goes off" do
+            @task.properties.contactor_fault_probabilities =
+                Types.motors_weg_cvw300.ContactorFaultProbabilities.new(
+                    trigger: 100,
+                    soft_reset_sucess: 100
+                )
+            syskit_configure_and_start(task)
+            expect_execution.to do
+                emit task.controller_fault_event
+                have_one_new_sample(task.inverter_state_port)
+                    .matching { |s| s.inverter_status == :STATUS_FAULT }
+            end
+
+            expect_execution do
+                syskit_write task.external_fault_gpio_port, gpio_state(false)
+            end.to do
+                have_one_new_sample(task.inverter_state_port)
+                    .matching { |s| s.inverter_status == :STATUS_FAULT }
+            end
+
+            expect_execution do
+                syskit_write task.external_fault_gpio_port, gpio_state(true)
+            end.to do
+                have_one_new_sample(task.inverter_state_port)
+                    .matching { |s| s.inverter_status == :STATUS_READY }
+                emit task.running_event
+            end
+        end
+
+        it "emits a IO_TIMEOUT when there is a high value at port_power_disable_gpio "\
+           "port" do
+            syskit_configure_and_start(task)
+            expect_execution do
+                syskit_write task.port_power_disable_gpio_port, gpio_state(true)
+            end.to do
+                emit task.io_timeout_event
+            end
+        end
+
+        it "emits a IO_TIMEOUT when there is a high value at "\
+           "starboard_power_disable_gpio port" do
+            syskit_configure_and_start(task)
+            expect_execution do
+                syskit_write task.starboard_power_disable_gpio_port, gpio_state(true)
+            end.to do
+                emit task.io_timeout_event
+            end
+        end
+    end
+
     def gpio_state(value)
         Types.linux_gpios.GPIOState.new(
             states: [
