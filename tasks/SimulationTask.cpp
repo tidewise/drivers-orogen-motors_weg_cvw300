@@ -3,18 +3,17 @@
 #include "SimulationTask.hpp"
 
 #include <control_base/SaturationSignal.hpp>
-#include <random>
 
 using namespace motors_weg_cvw300;
 using namespace std;
 
 base::samples::Joints speedCommand(float cmd, std::string const& joint_name);
 control_base::SaturationSignal saturationSignal(bool saturation);
-bool rollProbability(double probability);
 
 SimulationTask::SimulationTask(std::string const& name)
     : SimulationTaskBase(name)
 {
+    std::mt19937 m_distribution_generator(std::random_device{}());
 }
 
 SimulationTask::~SimulationTask()
@@ -164,12 +163,10 @@ void SimulationTask::possiblyTriggerContactorFault()
     }
 }
 
-bool rollProbability(double probability)
+bool SimulationTask::rollProbability(double probability)
 {
-    random_device random_device;
-    mt19937 generator(random_device());
     bernoulli_distribution distribution(probability);
-    return distribution(generator);
+    return distribution(m_distribution_generator);
 }
 
 bool SimulationTask::validateCommand(base::samples::Joints cmd,

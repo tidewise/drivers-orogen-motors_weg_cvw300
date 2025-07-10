@@ -4,6 +4,7 @@
 #define MOTORS_WEG_CVW300_SIMULATIONTASK_TASK_HPP
 
 #include "motors_weg_cvw300/SimulationTaskBase.hpp"
+#include <random>
 
 namespace motors_weg_cvw300 {
 
@@ -47,6 +48,8 @@ namespace motors_weg_cvw300 {
          */
         base::samples::Joints m_last_command_out;
 
+        std::mt19937 m_distribution_generator;
+
         void updateFaultState(bool gpio_propulsion_enable_value);
 
         void possiblyTriggerContactorFault();
@@ -75,6 +78,8 @@ namespace motors_weg_cvw300 {
         void simulateHardReset();
 
         void evaluateInverterStatus(InverterStatus status);
+
+        bool rollProbability(double probability);
 
     public:
         bool validateCommand(base::samples::Joints cmd,
