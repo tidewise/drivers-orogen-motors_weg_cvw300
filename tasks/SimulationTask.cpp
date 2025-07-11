@@ -153,9 +153,9 @@ void SimulationTask::updateHook()
     if (!m_edge_triggered_fault_state_output) {
         publishFault();
     }
+    readPowerDisableGPIOState();
     readExternalFaultGPIOState();
     updateFaultState();
-    readPowerDisableGPIOState();
 
     InverterState state = currentState();
     _inverter_state.write(state);
