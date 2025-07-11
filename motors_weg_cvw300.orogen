@@ -129,9 +129,7 @@ task_context "SimulationTask" do
 
     input_port "external_fault_gpio", "/linux_gpios/GPIOState"
 
-    input_port "port_power_disable_gpio", "/linux_gpios/GPIOState"
-
-    input_port "starboard_power_disable_gpio", "/linux_gpios/GPIOState"
+    input_port "power_disable_gpio", "/linux_gpios/GPIOState"
 
     # Input command
     #

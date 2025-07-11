@@ -296,21 +296,10 @@ describe OroGen.motors_weg_cvw300.SimulationTask do
             end
         end
 
-        it "emits a IO_TIMEOUT when there is a high value at port_power_disable_gpio "\
-           "port" do
+        it "emits a IO_TIMEOUT when there is a high value at power_disable_gpio port" do
             syskit_configure_and_start(task)
             expect_execution do
-                syskit_write task.port_power_disable_gpio_port, gpio_state(true)
-            end.to do
-                emit task.io_timeout_event
-            end
-        end
-
-        it "emits a IO_TIMEOUT when there is a high value at "\
-           "starboard_power_disable_gpio port" do
-            syskit_configure_and_start(task)
-            expect_execution do
-                syskit_write task.starboard_power_disable_gpio_port, gpio_state(true)
+                syskit_write task.power_disable_gpio_port, gpio_state(true)
             end.to do
                 emit task.io_timeout_event
             end

@@ -145,8 +145,7 @@ void SimulationTask::updateHook()
     }
     readExternalFaultGPIOState();
     updateFaultState();
-    readPortPowerDisableGPIOState();
-    readStarboardPowerDisableGPIOState();
+    readPowerDisableGPIOState();
 
     InverterState state = currentState();
     _inverter_state.write(state);
@@ -233,20 +232,11 @@ bool SimulationTask::exitContactorFault()
     return rollProbability(m_contactor_fault_probabilities.break_on_external_fault);
 }
 
-void SimulationTask::readPortPowerDisableGPIOState()
+void SimulationTask::readPowerDisableGPIOState()
 {
-    linux_gpios::GPIOState port_power_disable;
-    if (_port_power_disable_gpio.read(port_power_disable) == RTT::NewData &&
-        port_power_disable.states[0].data) {
-        return exception(IO_TIMEOUT);
-    }
-}
-
-void SimulationTask::readStarboardPowerDisableGPIOState()
-{
-    linux_gpios::GPIOState starboard_power_disable;
-    if (_starboard_power_disable_gpio.read(starboard_power_disable) == RTT::NewData &&
-        starboard_power_disable.states[0].data) {
+    linux_gpios::GPIOState power_disable;
+    if (_power_disable_gpio.read(power_disable) == RTT::NewData &&
+        power_disable.states[0].data) {
         return exception(IO_TIMEOUT);
     }
 }
