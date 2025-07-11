@@ -48,9 +48,13 @@ namespace motors_weg_cvw300 {
          */
         base::samples::Joints m_last_command_out;
 
-        std::mt19937 m_distribution_generator;
-
         bool m_external_fault;
+
+        std::mt19937 m_distribution_generator;
+        std::bernoulli_distribution m_trigger_distribution;
+        std::bernoulli_distribution m_break_on_external_fault_distribution;
+
+        void setupDistributionsAndGenerator();
 
         void updateFaultState();
 
@@ -77,7 +81,7 @@ namespace motors_weg_cvw300 {
 
         void evaluateInverterStatus(InverterStatus status);
 
-        bool rollProbability(double probability);
+        bool rollProbability(std::bernoulli_distribution& distribution);
 
     public:
         bool validateCommand(base::samples::Joints cmd,

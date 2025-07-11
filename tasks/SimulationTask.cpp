@@ -13,7 +13,6 @@ control_base::SaturationSignal saturationSignal(bool saturation);
 SimulationTask::SimulationTask(std::string const& name)
     : SimulationTaskBase(name)
 {
-    std::mt19937 m_distribution_generator(std::random_device{}());
 }
 
 SimulationTask::~SimulationTask()
@@ -34,7 +33,7 @@ bool SimulationTask::configureHook()
     }
     m_joint_name = _joint_name.get();
     m_zero_command = speedCommand(0, m_joint_name);
-    m_contactor_fault_probabilities = _contactor_fault_probabilities.get();
+    setupDistributionsAndGenerator();
 
     return true;
 }
@@ -52,6 +51,15 @@ base::samples::Joints speedCommand(float cmd, std::string const& joint_name)
     return speed_cmd;
 }
 
+void SimulationTask::setupDistributionsAndGenerator(){
+    mt19937 m_distribution_generator(std::random_device{}());
+    m_contactor_fault_probabilities = _contactor_fault_probabilities.get();
+    m_trigger_distribution =
+        bernoulli_distribution(m_contactor_fault_probabilities.trigger);
+    m_break_on_external_fault_distribution =
+        bernoulli_distribution(m_contactor_fault_probabilities.break_on_external_fault);
+}
+
 bool SimulationTask::startHook()
 {
     if (!SimulationTaskBase::startHook()) {
@@ -59,6 +67,8 @@ bool SimulationTask::startHook()
     }
     m_current_fault_state = Fault::NO_FAULT;
     m_external_fault = false;
+    m_trigger_distribution.reset();
+    m_break_on_external_fault_distribution.reset();
 
     updateWatchdog();
     writeCommandOut(zeroCommand());
@@ -155,12 +165,11 @@ void SimulationTask::updateHook()
 
 bool SimulationTask::triggerContactorFault()
 {
-    return rollProbability(m_contactor_fault_probabilities.trigger);
+    return rollProbability(m_trigger_distribution);
 }
 
-bool SimulationTask::rollProbability(double probability)
+bool SimulationTask::rollProbability(std::bernoulli_distribution& distribution)
 {
-    bernoulli_distribution distribution(probability);
     return distribution(m_distribution_generator);
 }
 
@@ -229,7 +238,7 @@ void SimulationTask::updateFaultState()
 
 bool SimulationTask::exitContactorFault()
 {
-    return rollProbability(m_contactor_fault_probabilities.break_on_external_fault);
+    return rollProbability(m_break_on_external_fault_distribution);
 }
 
 void SimulationTask::readPowerDisableGPIOState()
