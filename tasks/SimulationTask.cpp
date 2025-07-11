@@ -51,7 +51,8 @@ base::samples::Joints speedCommand(float cmd, std::string const& joint_name)
     return speed_cmd;
 }
 
-void SimulationTask::setupDistributionsAndGenerator(){
+void SimulationTask::setupDistributionsAndGenerator()
+{
     mt19937 m_distribution_generator(std::random_device{}());
     m_contactor_fault_probabilities = _contactor_fault_probabilities.get();
     m_trigger_distribution =
@@ -104,8 +105,7 @@ base::samples::Joints const& SimulationTask::zeroCommand()
 
 InverterStatus SimulationTask::inverterStatus() const
 {
-    if (m_current_fault_state == Fault::EXTERNAL_FAULT ||
-        m_current_fault_state == Fault::CONTACTOR_FAULT) {
+    if (m_current_fault_state != Fault::NO_FAULT) {
         return InverterStatus::STATUS_FAULT;
     }
 
@@ -213,13 +213,15 @@ void SimulationTask::readExternalFaultGPIOState()
 
 void SimulationTask::updateFaultState()
 {
-    if (m_current_fault_state == Fault::CONTACTOR_FAULT && m_external_fault &&
-        exitContactorFault()) {
-        m_current_fault_state = Fault::EXTERNAL_FAULT;
+    if (m_current_fault_state == Fault::CONTACTOR_FAULT) {
+        if (m_external_fault && exitContactorFault()) {
+            m_current_fault_state = Fault::EXTERNAL_FAULT;
+            return;
+        }
+        m_current_fault_state = Fault::CONTACTOR_FAULT;
         return;
     }
-    if (!m_external_fault && m_current_fault_state == Fault::EXTERNAL_FAULT &&
-        m_current_fault_state != Fault::CONTACTOR_FAULT) {
+    if (!m_external_fault && m_current_fault_state == Fault::EXTERNAL_FAULT) {
         m_current_fault_state = Fault::NO_FAULT;
         return;
     }
