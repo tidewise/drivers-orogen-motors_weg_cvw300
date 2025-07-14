@@ -264,6 +264,7 @@ InverterState SimulationTask::currentState() const
 void SimulationTask::evaluateInverterStatus(InverterStatus status)
 {
     if (status == InverterStatus::STATUS_FAULT) {
+        publishFault();
         error(CONTROLLER_FAULT);
     }
 }
@@ -271,10 +272,10 @@ void SimulationTask::evaluateInverterStatus(InverterStatus status)
 void SimulationTask::errorHook()
 {
     SimulationTaskBase::errorHook();
-    publishFault();
 
     readExternalFaultGPIOState();
     updateFaultState();
+    publishFault();
     _inverter_state.write(currentState());
 
     writeCommandOut(zeroCommand());
