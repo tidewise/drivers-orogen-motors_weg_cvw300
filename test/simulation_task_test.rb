@@ -258,12 +258,18 @@ describe OroGen.motors_weg_cvw300.SimulationTask do
                     break_on_external_fault: 0
                 )
             syskit_configure(task)
-            expect_execution { task.start! }
+            output = expect_execution { task.start! }
             .to do
                 emit task.controller_fault_event
-                have_one_new_sample(task.inverter_state_port)
-                    .matching { |s| s.inverter_status == :STATUS_FAULT }
             end
+            outputs = expect_execution.to do
+                [
+                    have_one_new_sample(task.inverter_state_port),
+                    have_one_new_sample(task.fault_state_port)
+                ]
+            end
+            assert_equal(outputs[0].inverter_status, :STATUS_FAULT)
+            assert_equal(outputs[1].current_fault, 185)
         end
 
         it "transits between error state and running state when the contactor fault " \
@@ -274,18 +280,25 @@ describe OroGen.motors_weg_cvw300.SimulationTask do
                     break_on_external_fault: 100
                 )
             syskit_configure_and_start(task)
-            expect_execution.to do
-                emit task.controller_fault_event
-                have_one_new_sample(task.inverter_state_port)
-                    .matching { |s| s.inverter_status == :STATUS_FAULT }
-            end
 
-            expect_execution do
+            outputs = expect_execution.to do
+                emit task.controller_fault_event
+                [
+                    have_one_new_sample(task.inverter_state_port),
+                    have_one_new_sample(task.fault_state_port)
+                ]
+            end
+            assert_equal(outputs[0].inverter_status, :STATUS_FAULT)
+            assert_equal(outputs[1].current_fault, 185)
+
+            s = expect_execution do
                 syskit_write task.external_fault_gpio_port, gpio_state(false)
             end.to do
                 have_one_new_sample(task.inverter_state_port)
                     .matching { |s| s.inverter_status == :STATUS_FAULT }
+                have_one_new_sample(task.fault_state_port)
             end
+            assert_equal(s.current_fault, 91)
 
             expect_execution do
                 syskit_write task.external_fault_gpio_port, gpio_state(true)
