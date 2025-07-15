@@ -107,6 +107,7 @@ end
 task_context "SimulationTask" do
     needs_configuration
 
+    # The probabilities to emit and exit the contactor fault
     property "contactor_fault_probabilities", "/motors_weg_cvw300/ContactorFaultProbabilities"
 
     # The controlled joint name at the sdf file
