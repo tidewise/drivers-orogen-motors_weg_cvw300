@@ -89,7 +89,8 @@ void SimulationTask::updateWatchdog()
 
 void SimulationTask::writeCommandOut(base::samples::Joints const& cmd)
 {
-    if (inverterStatus() != InverterStatus::STATUS_FAULT) {
+    if (inverterStatus(m_current_fault_state, m_last_command_out) !=
+        InverterStatus::STATUS_FAULT) {
         _cmd_out.write(m_last_command_out = cmd);
     }
     else {
@@ -103,13 +104,14 @@ base::samples::Joints const& SimulationTask::zeroCommand()
     return m_zero_command;
 }
 
-InverterStatus SimulationTask::inverterStatus() const
+InverterStatus SimulationTask::inverterStatus(Fault const& current_fault_state,
+    base::samples::Joints const& last_command_out)
 {
-    if (m_current_fault_state != Fault::NO_FAULT) {
+    if (current_fault_state != Fault::NO_FAULT) {
         return InverterStatus::STATUS_FAULT;
     }
 
-    if (m_last_command_out.elements.size() && m_last_command_out.elements[0].speed != 0) {
+    if (last_command_out.elements.size() && last_command_out.elements[0].speed != 0) {
         return InverterStatus::STATUS_RUN;
     }
 
@@ -155,7 +157,7 @@ void SimulationTask::updateHook()
     }
     readPowerDisableGPIOState();
     readExternalFaultGPIOState();
-    updateFaultState();
+    m_current_fault_state = updateFaultState(m_current_fault_state, m_external_fault);
 
     InverterState state = currentState();
     _inverter_state.write(state);
@@ -211,30 +213,26 @@ void SimulationTask::readExternalFaultGPIOState()
     }
 }
 
-void SimulationTask::updateFaultState()
+Fault SimulationTask::updateFaultState(Fault const& current_fault_state,
+    bool external_fault)
 {
-    if (m_current_fault_state == Fault::CONTACTOR_FAULT) {
-        if (m_external_fault && exitContactorFault()) {
-            m_current_fault_state = Fault::EXTERNAL_FAULT;
-            return;
+    if (current_fault_state == Fault::CONTACTOR_FAULT) {
+        if (external_fault && exitContactorFault()) {
+            return Fault::EXTERNAL_FAULT;
         }
-        m_current_fault_state = Fault::CONTACTOR_FAULT;
-        return;
+        return Fault::CONTACTOR_FAULT;
     }
-    if (!m_external_fault && m_current_fault_state == Fault::EXTERNAL_FAULT) {
-        m_current_fault_state = Fault::NO_FAULT;
-        return;
+    if (!external_fault && current_fault_state == Fault::EXTERNAL_FAULT) {
+        return Fault::NO_FAULT;
     }
     if (triggerContactorFault()) {
-        m_current_fault_state = Fault::CONTACTOR_FAULT;
-        return;
+        return Fault::CONTACTOR_FAULT;
     }
-    if (m_external_fault) {
-        m_current_fault_state = Fault::EXTERNAL_FAULT;
-        return;
+    if (external_fault) {
+        return Fault::EXTERNAL_FAULT;
     }
     else {
-        m_current_fault_state = Fault::NO_FAULT;
+        return Fault::NO_FAULT;
     }
 }
 
@@ -255,7 +253,7 @@ void SimulationTask::readPowerDisableGPIOState()
 InverterState SimulationTask::currentState() const
 {
     InverterState state;
-    state.inverter_status = inverterStatus();
+    state.inverter_status = inverterStatus(m_current_fault_state, m_last_command_out);
     state.time = base::Time::now();
 
     return state;
@@ -274,12 +272,13 @@ void SimulationTask::errorHook()
     SimulationTaskBase::errorHook();
 
     readExternalFaultGPIOState();
-    updateFaultState();
+    m_current_fault_state = updateFaultState(m_current_fault_state, m_external_fault);
     publishFault();
     _inverter_state.write(currentState());
 
     writeCommandOut(zeroCommand());
-    if (inverterStatus() != InverterStatus::STATUS_FAULT) {
+    if (inverterStatus(m_current_fault_state, m_last_command_out) !=
+        InverterStatus::STATUS_FAULT) {
         recover();
     }
 }

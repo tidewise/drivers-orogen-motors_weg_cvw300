@@ -56,7 +56,7 @@ namespace motors_weg_cvw300 {
 
         void setupDistributionsAndGenerator();
 
-        void updateFaultState();
+        Fault updateFaultState(Fault const& current_fault_state, bool external_fault);
 
         bool triggerContactorFault();
 
@@ -66,7 +66,8 @@ namespace motors_weg_cvw300 {
 
         void writeCommandOut(base::samples::Joints const& cmd);
 
-        InverterStatus inverterStatus() const;
+        static InverterStatus inverterStatus(Fault const& current_falt,
+            base::samples::Joints const& last_command_out);
 
         void publishFault();
 
