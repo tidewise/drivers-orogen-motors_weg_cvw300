@@ -271,6 +271,7 @@ void SimulationTask::errorHook()
 {
     SimulationTaskBase::errorHook();
 
+    readPowerDisableGPIOState();
     readExternalFaultGPIOState();
     m_current_fault_state = updateFaultState(m_current_fault_state, m_external_fault);
     publishFault();
