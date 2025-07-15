@@ -78,7 +78,7 @@ namespace motors_weg_cvw300 {
          */
         void readExternalFaultGPIOState();
 
-        void readPowerDisableGPIOState();
+        bool readPowerDisableGPIOState();
 
         void evaluateInverterStatus(InverterStatus status);
 

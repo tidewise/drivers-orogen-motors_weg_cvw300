@@ -197,6 +197,17 @@ describe OroGen.motors_weg_cvw300.SimulationTask do
                 maintain(at_least_during: 1) { task.orogen_state == :CONTROLLER_FAULT }
             end
         end
+        it "does not keeps publishing fault and inverter state after an IO_TIMEOUT "\
+           "errorHook" do
+            syskit_configure_and_start(task)
+            expect_execution do
+                syskit_write task.power_disable_gpio_port, gpio_state(true)
+            end.to do
+                emit task.io_timeout_event
+                have_no_new_sample task.inverter_state_port
+                have_no_new_sample task.fault_state_port
+            end
+        end
     end
 
     describe "fault reporting" do

@@ -155,7 +155,10 @@ void SimulationTask::updateHook()
     if (!m_edge_triggered_fault_state_output) {
         publishFault();
     }
-    readPowerDisableGPIOState();
+    if(readPowerDisableGPIOState()){
+        // This simulates the motor power off through the power_disable_gpio
+        return exception(IO_TIMEOUT);
+    };
     readExternalFaultGPIOState();
     m_current_fault_state = updateFaultState(m_current_fault_state, m_external_fault);
 
@@ -241,13 +244,13 @@ bool SimulationTask::exitContactorFault()
     return rollProbability(m_break_on_external_fault_distribution);
 }
 
-void SimulationTask::readPowerDisableGPIOState()
+bool SimulationTask::readPowerDisableGPIOState()
 {
     linux_gpios::GPIOState power_disable;
-    if (_power_disable_gpio.read(power_disable) == RTT::NewData &&
-        power_disable.states[0].data) {
-        return exception(IO_TIMEOUT);
+    if (_power_disable_gpio.read(power_disable) == RTT::NewData) {
+        return power_disable.states[0].data;
     }
+    return false;
 }
 
 InverterState SimulationTask::currentState() const
@@ -271,7 +274,10 @@ void SimulationTask::errorHook()
 {
     SimulationTaskBase::errorHook();
 
-    readPowerDisableGPIOState();
+    if(readPowerDisableGPIOState()){
+        // This simulates the motor power off through the power_disable_gpio
+        return exception(IO_TIMEOUT);
+    };
     readExternalFaultGPIOState();
     m_current_fault_state = updateFaultState(m_current_fault_state, m_external_fault);
     publishFault();
