@@ -155,7 +155,7 @@ void SimulationTask::updateHook()
     if (!m_edge_triggered_fault_state_output) {
         publishFault();
     }
-    if(readPowerDisableGPIOState()){
+    if (readPowerDisableGPIOState()) {
         // This simulates the motor power off through the power_disable_gpio
         return exception(IO_TIMEOUT);
     };
@@ -229,6 +229,8 @@ Fault SimulationTask::updateFaultState(Fault const& current_fault_state,
         return Fault::NO_FAULT;
     }
     if (triggerContactorFault()) {
+        // Ideally, the contactor fault trigger roll should occur before the external
+        // fault exit. However, placing it there would make the logic much harder to test.
         return Fault::CONTACTOR_FAULT;
     }
     if (external_fault) {
@@ -274,7 +276,7 @@ void SimulationTask::errorHook()
 {
     SimulationTaskBase::errorHook();
 
-    if(readPowerDisableGPIOState()){
+    if (readPowerDisableGPIOState()) {
         // This simulates the motor power off through the power_disable_gpio
         return exception(IO_TIMEOUT);
     };
