@@ -4,6 +4,7 @@
 #define MOTORS_WEG_CVW300_SIMULATIONTASK_TASK_HPP
 
 #include "motors_weg_cvw300/SimulationTaskBase.hpp"
+#include <random>
 
 namespace motors_weg_cvw300 {
 
@@ -36,7 +37,8 @@ namespace motors_weg_cvw300 {
         bool m_edge_triggered_fault_state_output;
         // end component properties
 
-        bool m_external_fault;
+        Fault m_current_fault_state;
+        ContactorFaultProbabilities m_contactor_fault_probabilities;
         base::Time m_cmd_deadline;
 
         base::samples::Joints m_zero_command;
@@ -46,13 +48,26 @@ namespace motors_weg_cvw300 {
          */
         base::samples::Joints m_last_command_out;
 
+        bool m_external_fault;
+
+        std::mt19937 m_distribution_generator;
+        std::bernoulli_distribution m_trigger_distribution;
+        std::bernoulli_distribution m_break_on_external_fault_distribution;
+
+        void setupDistributionsAndGenerator();
+
+        Fault updateFaultState(Fault const& current_fault_state, bool external_fault);
+
+        bool triggerContactorFault();
+
+        bool exitContactorFault();
+
         void updateWatchdog();
 
         void writeCommandOut(base::samples::Joints const& cmd);
 
-        InverterStatus inverterStatus() const;
-
-        std::uint16_t currentFault() const;
+        static InverterStatus inverterStatus(Fault const& current_falt,
+            base::samples::Joints const& last_command_out);
 
         void publishFault();
 
@@ -63,7 +78,11 @@ namespace motors_weg_cvw300 {
          */
         void readExternalFaultGPIOState();
 
+        bool readPowerDisableGPIOState();
+
         void evaluateInverterStatus(InverterStatus status);
+
+        bool rollProbability(std::bernoulli_distribution& distribution);
 
     public:
         bool validateCommand(base::samples::Joints cmd,

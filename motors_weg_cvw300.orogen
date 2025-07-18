@@ -107,6 +107,9 @@ end
 task_context "SimulationTask" do
     needs_configuration
 
+    # The probabilities to emit and exit the contactor fault
+    property "contactor_fault_probabilities", "/motors_weg_cvw300/ContactorFaultProbabilities"
+
     # The controlled joint name at the sdf file
     property "joint_name", "/std/string"
 
@@ -127,6 +130,8 @@ task_context "SimulationTask" do
 
     input_port "external_fault_gpio", "/linux_gpios/GPIOState"
 
+    input_port "power_disable_gpio", "/linux_gpios/GPIOState"
+
     # Input command
     #
     # type: Speed
@@ -144,7 +149,7 @@ task_context "SimulationTask" do
     error_states :CONTROLLER_FAULT
 
     exception_states :INVALID_COMMAND_SIZE, :INVALID_COMMAND_PARAMETER,
-                     :INVALID_JOINT_NAME
+                     :INVALID_JOINT_NAME, :IO_TIMEOUT
 
     periodic 0.1
 end

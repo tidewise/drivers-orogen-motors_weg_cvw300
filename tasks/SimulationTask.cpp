@@ -5,11 +5,7 @@
 #include <control_base/SaturationSignal.hpp>
 
 using namespace motors_weg_cvw300;
-
-enum Fault {
-    NO_FAULT = 0,
-    EXTERNAL_FAULT = 91
-};
+using namespace std;
 
 base::samples::Joints speedCommand(float cmd, std::string const& joint_name);
 control_base::SaturationSignal saturationSignal(bool saturation);
@@ -32,13 +28,12 @@ bool SimulationTask::configureHook()
     m_limits = _limits.get();
     m_watchdog_timeout = _watchdog_timeout.get();
     m_edge_triggered_fault_state_output = _edge_triggered_fault_state_output.get();
-
     if (_joint_name.get() == "") {
         throw std::runtime_error("joint_name property must be set");
     }
     m_joint_name = _joint_name.get();
-
     m_zero_command = speedCommand(0, m_joint_name);
+    setupDistributionsAndGenerator();
 
     return true;
 }
@@ -56,12 +51,25 @@ base::samples::Joints speedCommand(float cmd, std::string const& joint_name)
     return speed_cmd;
 }
 
+void SimulationTask::setupDistributionsAndGenerator()
+{
+    mt19937 m_distribution_generator(std::random_device{}());
+    m_contactor_fault_probabilities = _contactor_fault_probabilities.get();
+    m_trigger_distribution =
+        bernoulli_distribution(m_contactor_fault_probabilities.trigger);
+    m_break_on_external_fault_distribution =
+        bernoulli_distribution(m_contactor_fault_probabilities.break_on_external_fault);
+}
+
 bool SimulationTask::startHook()
 {
     if (!SimulationTaskBase::startHook()) {
         return false;
     }
+    m_current_fault_state = Fault::NO_FAULT;
     m_external_fault = false;
+    m_trigger_distribution.reset();
+    m_break_on_external_fault_distribution.reset();
 
     updateWatchdog();
     writeCommandOut(zeroCommand());
@@ -81,7 +89,8 @@ void SimulationTask::updateWatchdog()
 
 void SimulationTask::writeCommandOut(base::samples::Joints const& cmd)
 {
-    if (inverterStatus() != InverterStatus::STATUS_FAULT) {
+    if (inverterStatus(m_current_fault_state, m_last_command_out) !=
+        InverterStatus::STATUS_FAULT) {
         _cmd_out.write(m_last_command_out = cmd);
     }
     else {
@@ -95,32 +104,24 @@ base::samples::Joints const& SimulationTask::zeroCommand()
     return m_zero_command;
 }
 
-InverterStatus SimulationTask::inverterStatus() const
+InverterStatus SimulationTask::inverterStatus(Fault const& current_fault_state,
+    base::samples::Joints const& last_command_out)
 {
-    if (currentFault() == Fault::EXTERNAL_FAULT) {
+    if (current_fault_state != Fault::NO_FAULT) {
         return InverterStatus::STATUS_FAULT;
     }
 
-    if (m_last_command_out.elements.size() && m_last_command_out.elements[0].speed != 0) {
+    if (last_command_out.elements.size() && last_command_out.elements[0].speed != 0) {
         return InverterStatus::STATUS_RUN;
     }
 
     return InverterStatus::STATUS_READY;
 }
 
-std::uint16_t SimulationTask::currentFault() const
-{
-    if (m_external_fault) {
-        return Fault::EXTERNAL_FAULT;
-    }
-
-    return Fault::NO_FAULT;
-}
-
 void SimulationTask::publishFault()
 {
     FaultState fault;
-    fault.current_fault = currentFault();
+    fault.current_fault = m_current_fault_state;
     fault.fault_history[0] = fault.current_fault;
 
     fault.time = base::Time::now();
@@ -154,13 +155,27 @@ void SimulationTask::updateHook()
     if (!m_edge_triggered_fault_state_output) {
         publishFault();
     }
-
+    if (readPowerDisableGPIOState()) {
+        // This simulates the motor power off through the power_disable_gpio
+        return exception(IO_TIMEOUT);
+    };
     readExternalFaultGPIOState();
+    m_current_fault_state = updateFaultState(m_current_fault_state, m_external_fault);
 
     InverterState state = currentState();
     _inverter_state.write(state);
 
     evaluateInverterStatus(state.inverter_status);
+}
+
+bool SimulationTask::triggerContactorFault()
+{
+    return rollProbability(m_trigger_distribution);
+}
+
+bool SimulationTask::rollProbability(std::bernoulli_distribution& distribution)
+{
+    return distribution(m_distribution_generator);
 }
 
 bool SimulationTask::validateCommand(base::samples::Joints cmd,
@@ -195,16 +210,55 @@ control_base::SaturationSignal saturationSignal(bool saturation)
 
 void SimulationTask::readExternalFaultGPIOState()
 {
-    linux_gpios::GPIOState estop;
-    if (_external_fault_gpio.read(estop) == RTT::NewData) {
-        m_external_fault = !estop.states[0].data;
+    linux_gpios::GPIOState external_fault_gpio;
+    if (_external_fault_gpio.read(external_fault_gpio) == RTT::NewData) {
+        m_external_fault = !external_fault_gpio.states[0].data;
     }
+}
+
+Fault SimulationTask::updateFaultState(Fault const& current_fault_state,
+    bool external_fault)
+{
+    if (current_fault_state == Fault::CONTACTOR_FAULT) {
+        if (external_fault && exitContactorFault()) {
+            return Fault::EXTERNAL_FAULT;
+        }
+        return Fault::CONTACTOR_FAULT;
+    }
+    if (!external_fault && current_fault_state == Fault::EXTERNAL_FAULT) {
+        return Fault::NO_FAULT;
+    }
+    if (triggerContactorFault()) {
+        // Ideally, the contactor fault trigger roll should occur before the external
+        // fault exit. However, placing it there would make the logic much harder to test.
+        return Fault::CONTACTOR_FAULT;
+    }
+    if (external_fault) {
+        return Fault::EXTERNAL_FAULT;
+    }
+    else {
+        return Fault::NO_FAULT;
+    }
+}
+
+bool SimulationTask::exitContactorFault()
+{
+    return rollProbability(m_break_on_external_fault_distribution);
+}
+
+bool SimulationTask::readPowerDisableGPIOState()
+{
+    linux_gpios::GPIOState power_disable;
+    if (_power_disable_gpio.read(power_disable) == RTT::NewData) {
+        return power_disable.states[0].data;
+    }
+    return false;
 }
 
 InverterState SimulationTask::currentState() const
 {
     InverterState state;
-    state.inverter_status = inverterStatus();
+    state.inverter_status = inverterStatus(m_current_fault_state, m_last_command_out);
     state.time = base::Time::now();
 
     return state;
@@ -213,6 +267,7 @@ InverterState SimulationTask::currentState() const
 void SimulationTask::evaluateInverterStatus(InverterStatus status)
 {
     if (status == InverterStatus::STATUS_FAULT) {
+        publishFault();
         error(CONTROLLER_FAULT);
     }
 }
@@ -220,13 +275,19 @@ void SimulationTask::evaluateInverterStatus(InverterStatus status)
 void SimulationTask::errorHook()
 {
     SimulationTaskBase::errorHook();
-    publishFault();
 
+    if (readPowerDisableGPIOState()) {
+        // This simulates the motor power off through the power_disable_gpio
+        return exception(IO_TIMEOUT);
+    };
     readExternalFaultGPIOState();
+    m_current_fault_state = updateFaultState(m_current_fault_state, m_external_fault);
+    publishFault();
     _inverter_state.write(currentState());
 
     writeCommandOut(zeroCommand());
-    if (inverterStatus() != InverterStatus::STATUS_FAULT) {
+    if (inverterStatus(m_current_fault_state, m_last_command_out) !=
+        InverterStatus::STATUS_FAULT) {
         recover();
     }
 }
