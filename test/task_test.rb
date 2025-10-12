@@ -13,56 +13,8 @@ describe OroGen.motors_weg_cvw300.Task do
     include ModbusHelpers
 
     before do
-        @task, @reader, @writer = iodrivers_base_prepare(
-            OroGen.motors_weg_cvw300.Task
-                  .deployed_as("motors_weg_cvw300_test")
-        )
-        modbus_helpers_setup(@task, @reader, @writer)
-
-        @task.properties.io_read_timeout = Time.at(2)
-        @task.properties.modbus_interframe_delay = Time.at(0.01)
-        @task.properties.watchdog do |sw|
-            sw.timeout = Time.at(0.5)
-            sw
-        end
-
-        modbus_set(405, 512) # number encoder pulses
-        modbus_set(401, 10) # nominal current
-        modbus_set(402, 2000) # nominal speed (rpm)
-        modbus_set(404, 2) # 12 kW
-
-        modbus_set(2, 0) # actual rotation (rpm)
-        modbus_set(3, 0) # actual current (A)
-        modbus_set(4, 0) # battery voltage (0.1 V)
-        modbus_set(5, 0) # output frequency (0.1 Hz)
-        modbus_set(6, 1) # inverter state (1 == Run)
-        modbus_set(7, 0) # output voltage (0.1V)
-        modbus_set(8, 0) # not used - vehicle speed
-        modbus_set(9, 0) # motor torque (0.1 % torque nominal)
-
-        modbus_set(30, 0) # mosfet temperature (0.1 C)
-        modbus_set(34, 0) # air temperature (0.1 C)
-
-        modbus_set(37, 20) # motor overload ration (percentage 0-100)
-
-        modbus_set(48, 0) # current alarm
-        modbus_set(49, 0) # current fault
-
-        modbus_set(50, 1) # last faults
-        modbus_set(54, 2)
-        modbus_set(58, 3)
-        modbus_set(62, 4)
-        modbus_set(66, 5)
-        modbus_set(90, 11) # inverter state during last fault
-        modbus_set(91, 12)
-        modbus_set(92, 13)
-        modbus_set(93, 14)
-        modbus_set(94, 15)
-        modbus_set(95, 16)
-
-        modbus_set(265, 11) # no external fault
-        modbus_set(266, 12) # reset
-        modbus_set(275, 21) # pre-charge ok
+        modbus_initialize_registers
+        create_task
     end
 
     after do
@@ -453,6 +405,39 @@ describe OroGen.motors_weg_cvw300.Task do
         end
     end
 
+    describe "handling of errors on the RS485 bus" do
+        before do
+            expect_execution do
+                @task.execution_agent.stop!
+                plan.remove_task @task
+            end.to_emit @task.execution_agent.stop_event
+
+            create_task(
+                deployed_model:
+                    OroGen.motors_weg_cvw300.Task
+                          .deploy_with(OroGen::Deployments.motors_weg_cvw300_slow_task)
+            )
+        end
+
+        it "errors out on unexpected bytes coming in" do
+            modbus_configure_and_start
+
+            # Wait for two samples to be right after a cycle, to maximize the chance
+            # that the write happens after a updateHook. temperatures_port is the last
+            # written port on the task
+            modbus_expect_execution(@writer, @reader).to do
+                have_new_samples task.temperatures_port, 2
+            end
+
+            # Now sleep a wee bit ... to make sure we're good even if temperatures_port
+            # is not the last port
+            sleep 0.2
+
+            expect_execution { @writer.write({ time: Time.now, data: [0] }) }
+                .to { emit task.exception_event }
+        end
+    end
+
     describe "inverted = false" do
         before do
             @task.properties.inverted = false
@@ -626,5 +611,62 @@ describe OroGen.motors_weg_cvw300.Task do
                 end
             end
         end
+    end
+
+    def default_deployed_model
+        OroGen.motors_weg_cvw300.Task
+              .deployed_as("motors_weg_cvw300_test")
+    end
+
+    def create_task(deployed_model: default_deployed_model)
+        @task, @reader, @writer = iodrivers_base_prepare(deployed_model)
+        modbus_helpers_setup(@task, @reader, @writer)
+
+        @task.properties.io_read_timeout = Time.at(2)
+        @task.properties.modbus_interframe_delay = Time.at(0.01)
+        @task.properties.watchdog do |sw|
+            sw.timeout = Time.at(0.5)
+            sw
+        end
+    end
+
+    def modbus_initialize_registers
+        modbus_set(405, 512) # number encoder pulses
+        modbus_set(401, 10) # nominal current
+        modbus_set(402, 2000) # nominal speed (rpm)
+        modbus_set(404, 2) # 12 kW
+
+        modbus_set(2, 0) # actual rotation (rpm)
+        modbus_set(3, 0) # actual current (A)
+        modbus_set(4, 0) # battery voltage (0.1 V)
+        modbus_set(5, 0) # output frequency (0.1 Hz)
+        modbus_set(6, 1) # inverter state (1 == Run)
+        modbus_set(7, 0) # output voltage (0.1V)
+        modbus_set(8, 0) # not used - vehicle speed
+        modbus_set(9, 0) # motor torque (0.1 % torque nominal)
+
+        modbus_set(30, 0) # mosfet temperature (0.1 C)
+        modbus_set(34, 0) # air temperature (0.1 C)
+
+        modbus_set(37, 20) # motor overload ration (percentage 0-100)
+
+        modbus_set(48, 0) # current alarm
+        modbus_set(49, 0) # current fault
+
+        modbus_set(50, 1) # last faults
+        modbus_set(54, 2)
+        modbus_set(58, 3)
+        modbus_set(62, 4)
+        modbus_set(66, 5)
+        modbus_set(90, 11) # inverter state during last fault
+        modbus_set(91, 12)
+        modbus_set(92, 13)
+        modbus_set(93, 14)
+        modbus_set(94, 15)
+        modbus_set(95, 16)
+
+        modbus_set(265, 11) # no external fault
+        modbus_set(266, 12) # reset
+        modbus_set(275, 21) # pre-charge ok
     end
 end

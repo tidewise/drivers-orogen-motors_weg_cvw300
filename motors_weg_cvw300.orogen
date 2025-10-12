@@ -104,6 +104,13 @@ task_context "Task", subclasses: "iodrivers_base::Task" do
     periodic 0.1
 end
 
+unless namespace_disabled?("test")
+    deployment "motors_weg_cvw300_slow_task" do
+        task("motors_weg_cvw300_slow_task", "motors_weg_cvw300::Task")
+            .periodic(1)
+    end
+end
+
 task_context "SimulationTask" do
     needs_configuration
 
