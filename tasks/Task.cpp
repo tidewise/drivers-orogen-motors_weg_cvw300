@@ -194,6 +194,7 @@ void Task::updateHook()
 }
 void Task::processIO()
 {
+    throw std::logic_error("motors_weg_cvw300::Task should never call processIO");
 }
 void Task::errorHook()
 {
