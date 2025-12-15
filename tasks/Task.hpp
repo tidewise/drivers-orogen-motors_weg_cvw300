@@ -46,6 +46,7 @@ namespace motors_weg_cvw300 {
         void writeSpeedCommand(float cmd);
         bool commandTimedOut() const;
         void publishFault();
+        void publishRTUStatistics();
         bool checkSpeedSaturation(base::commands::Joints const& cmd);
         void evaluateInverterStatus(InverterStatus const& inverter_status);
         CurrentState readAndPublishControllerStates();

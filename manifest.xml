@@ -10,6 +10,7 @@
   <depend package="drivers/orogen/iodrivers_base" />
   <depend package="drivers/orogen/linux_gpios" />
   <depend package="control/orogen/control_base" />
+  <depend package="drivers/modbus" />
 
   <test_depend package="tools/syskit" />
 </package>

@@ -47,6 +47,8 @@ bool Task::configureHook()
     }
 
     driver->setInterframeDelay(_modbus_interframe_delay.get());
+    driver->setErrorIncrement(_modbus_error_count_increment.get());
+    driver->setErrorThreshold(_modbus_error_count_threshold.get());
 
     driver->readMotorRatings();
     driver->disable();
@@ -93,6 +95,7 @@ bool Task::startHook()
     m_last_temperature_update = Time();
 
     publishFault();
+    publishRTUStatistics();
     return true;
 }
 bool Task::commandTimedOut() const
@@ -160,6 +163,13 @@ void Task::publishFault()
     auto fault_state = m_driver->readFaultState();
     _fault_state.write(fault_state);
 }
+
+void Task::publishRTUStatistics()
+{
+    auto rtu_statistics = m_driver->getRTUStats();
+    _rtu_statistics.write(rtu_statistics);
+}
+
 void Task::updateHook()
 {
     TaskBase::updateHook();
@@ -191,6 +201,7 @@ void Task::updateHook()
     }
     auto state = readAndPublishControllerStates();
     evaluateInverterStatus(state.inverter_status);
+    publishRTUStatistics();
 }
 void Task::processIO()
 {
@@ -200,6 +211,7 @@ void Task::errorHook()
 {
     TaskBase::errorHook();
 
+    publishRTUStatistics();
     publishFault();
 
     // Try to reset the faults
@@ -218,6 +230,7 @@ void Task::errorHook()
 }
 void Task::stopHook()
 {
+    publishRTUStatistics();
     m_driver->disable();
     TaskBase::stopHook();
 }
