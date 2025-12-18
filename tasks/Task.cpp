@@ -13,6 +13,7 @@ Task::Task(std::string const& name)
     : TaskBase(name)
 {
     _modbus_interframe_delay.set(base::Time::fromMilliseconds(20));
+    _modbus_rtu_statistics_period.set(base::Time::fromSeconds(10));
 }
 
 Task::~Task()
@@ -49,6 +50,7 @@ bool Task::configureHook()
     driver->setInterframeDelay(_modbus_interframe_delay.get());
     driver->setErrorIncrement(_modbus_error_count_increment.get());
     driver->setErrorThreshold(_modbus_error_count_threshold.get());
+    m_modbus_rtu_statistics_period = _modbus_rtu_statistics_period.get();
 
     driver->readMotorRatings();
     driver->disable();
@@ -166,8 +168,33 @@ void Task::publishFault()
 
 void Task::publishRTUStatistics()
 {
-    auto rtu_statistics = m_driver->getRTUStats();
-    _rtu_statistics.write(rtu_statistics);
+    m_modbus_rtu_statistics = m_driver->getRTUStats();
+    m_modbus_rtu_statistics_deadline = Time::now() + m_modbus_rtu_statistics_period;
+    _modbus_rtu_statistics.write(m_modbus_rtu_statistics);
+}
+
+void Task::publishUpdatedRTUStatistics()
+{
+    auto new_status = m_driver->getRTUStats();
+    if (errorCountersUpdated(new_status) || rtuStatisticsDeadlineReached()) {
+        m_modbus_rtu_statistics = new_status;
+        m_modbus_rtu_statistics_deadline = Time::now() + m_modbus_rtu_statistics_period;
+        _modbus_rtu_statistics.write(m_modbus_rtu_statistics);
+    }
+}
+
+bool Task::rtuStatisticsDeadlineReached()
+{
+    return (Time::now() > m_modbus_rtu_statistics_deadline);
+}
+
+bool Task::errorCountersUpdated(modbus::RTUStatistics const& new_status)
+{
+    return (m_modbus_rtu_statistics.error_count != new_status.error_count ||
+            m_modbus_rtu_statistics.total_crc_error_count !=
+                new_status.total_crc_error_count ||
+            m_modbus_rtu_statistics.total_unexpected_reply_error_count !=
+                new_status.total_unexpected_reply_error_count);
 }
 
 void Task::updateHook()
@@ -201,7 +228,7 @@ void Task::updateHook()
     }
     auto state = readAndPublishControllerStates();
     evaluateInverterStatus(state.inverter_status);
-    publishRTUStatistics();
+    publishUpdatedRTUStatistics();
 }
 void Task::processIO()
 {

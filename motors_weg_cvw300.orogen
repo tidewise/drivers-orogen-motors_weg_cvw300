@@ -75,6 +75,12 @@ task_context "Task", subclasses: "iodrivers_base::Task" do
     # the error count by 1 until 0 and it cannot be modified.
     property "modbus_error_count_increment", "uint8_t", 1
 
+    # Modbus RTU Statistics output period
+    #
+    # The period of update for the modbus rtu statistics port if
+    # no increment on the error counter was detected. Default: 10 seconds
+    property "modbus_rtu_statistics_period", "/base/Time"
+
     # Control limits
     #
     # You may only set the speed and effort fields. Setting any other field
@@ -113,7 +119,12 @@ task_context "Task", subclasses: "iodrivers_base::Task" do
 
     output_port "saturation_signal", "/control_base/SaturationSignal"
 
-    output_port "rtu_statistics", "/modbus/RTUStatistics"
+    # RTU Statistics
+    #
+    # Reports the RTU Statistics on a fixed interval unless a change
+    # on an error counter has been detected, in this case it outputs
+    # immediatelly
+    output_port "modbus_rtu_statistics", "/modbus/RTUStatistics"
 
     exception_states "INVALID_COMMAND_SIZE", "INVALID_COMMAND_PARAMETER"
     error_states "CONTROLLER_FAULT", "CONTROLLER_UNDER_VOLTAGE"
