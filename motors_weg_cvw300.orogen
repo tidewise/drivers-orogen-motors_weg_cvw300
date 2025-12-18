@@ -123,7 +123,7 @@ task_context "Task", subclasses: "iodrivers_base::Task" do
     #
     # Reports the RTU Statistics on a fixed interval unless a change
     # on an error counter has been detected, in this case it outputs
-    # immediatelly
+    # immediately
     output_port "modbus_rtu_statistics", "/modbus/RTUStatistics"
 
     exception_states "INVALID_COMMAND_SIZE", "INVALID_COMMAND_PARAMETER"

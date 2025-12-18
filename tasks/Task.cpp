@@ -1,6 +1,7 @@
 /* Generated from orogen/lib/orogen/templates/tasks/Task.cpp */
 
 #include "Task.hpp"
+#include <base-logging/Logging.hpp>
 #include <iodrivers_base/ConfigureGuard.hpp>
 #include <motors_weg_cvw300/Driver.hpp>
 
