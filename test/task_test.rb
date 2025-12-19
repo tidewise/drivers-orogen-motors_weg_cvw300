@@ -683,6 +683,27 @@ describe OroGen.motors_weg_cvw300.Task do
             assert_equal(0, sample.total_unexpected_reply_error_count)
         end
 
+        it "detects an error if an extra 0 is sent after CRC" do
+            @task.properties.modbus_rtu_statistics_period = Time.at(999)
+            @task.properties.modbus_error_count_threshold = 10
+            modbus_expect_during_configuration_and_start.to do
+                emit task.start_event
+            end
+
+            request = expect_execution.to_have_one_new_sample(@reader)
+            reply = modbus_reply(request)
+            # Modify the reply to add the extra 0
+            reply.data << 0
+
+            sample = modbus_expect_execution(@writer, @reader) do
+                @writer.write(reply)
+            end.to_have_one_new_sample(task.modbus_rtu_statistics_port)
+
+            assert(task.running?)
+            assert_equal(0, sample.total_crc_error_count)
+            assert_equal(1, sample.total_unexpected_reply_error_count)
+        end
+
         it "updates the deadline for rtu stats after an error has been detected" do
             @task.properties.modbus_rtu_statistics_period = Time.at(1)
             @task.properties.modbus_error_count_threshold = 10
@@ -692,7 +713,7 @@ describe OroGen.motors_weg_cvw300.Task do
 
             request = expect_execution.to_have_one_new_sample(@reader)
             reply = modbus_reply(request)
-            # Modify the reply to add the error
+            # Modify the reply to add an error
             reply.data[5] += 1
 
             toc = Time.now
