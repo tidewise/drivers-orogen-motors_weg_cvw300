@@ -632,12 +632,17 @@ describe OroGen.motors_weg_cvw300.Task do
                 emit task.start_event
                 have_one_new_sample task.modbus_rtu_statistics_port
             end
+
             toc = Time.now
-            expect_execution { have_one_new_sample task.modbus_rtu_statistics_port }
-            expect_execution { have_one_new_sample task.modbus_rtu_statistics_port }
+            modbus_expect_execution(@writer, @reader).to do
+                have_one_new_sample task.modbus_rtu_statistics_port
+            end
+            modbus_expect_execution(@writer, @reader).to do
+                have_one_new_sample task.modbus_rtu_statistics_port
+            end
             tic = Time.now
 
-            assert_in_delta((tic - toc), 2, 0.3)
+            assert_includes (1.7..2.3), tic - toc
         end
 
         it "sends a rtu statistic if there is an error count change - CRC" do
@@ -674,7 +679,7 @@ describe OroGen.motors_weg_cvw300.Task do
             assert_equal(1, sample.error_count)
         end
 
-        it "updates the deadline after an error has been detected" do
+        it "updates the deadline for rtu stats after an error has been detected" do
             @task.properties.modbus_rtu_statistics_period = Time.at(1)
             @task.properties.modbus_error_count_threshold = 10
             modbus_expect_during_configuration_and_start.to do
