@@ -130,6 +130,7 @@ module ModbusHelpers
             address = sample.data[2] << 8 | sample.data[3]
             value = sample.data[4] << 8 | sample.data[5]
             @modbus_registers[address] = value
+            return Types.iodrivers_base.RawPacket.new(time: Time.now, data: sample.data)
         elsif [3, 4].include?(function) # Read registers
             start_address  = sample.data[2] << 8 | sample.data[3]
             register_count = sample.data[4] << 8 | sample.data[5]

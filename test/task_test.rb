@@ -613,6 +613,123 @@ describe OroGen.motors_weg_cvw300.Task do
         end
     end
 
+    describe "modbus RTU statistics" do
+        it "sends a rtu statistic on startup" do
+            @task.properties.modbus_rtu_statistics_period = Time.at(999)
+            modbus_expect_during_configuration_and_start.to do
+                emit task.start_event
+            end
+
+            modbus_expect_execution(@writer, @reader).to do
+                have_no_new_sample(task.modbus_rtu_statistics_port, at_least_during: 2)
+            end
+        end
+
+        it "sends a rtu statistic periodically after 1 sec independently" do
+            @task.properties.modbus_rtu_statistics_period = Time.at(1)
+            modbus_expect_during_configuration_and_start.to do
+                emit task.start_event
+            end
+
+            toc = Time.now
+            modbus_expect_execution(@writer, @reader).to do
+                have_one_new_sample task.modbus_rtu_statistics_port
+            end
+            modbus_expect_execution(@writer, @reader).to do
+                have_one_new_sample task.modbus_rtu_statistics_port
+            end
+            tic = Time.now
+
+            assert_includes (1.7..2.3), tic - toc
+        end
+
+        it "sends a rtu statistic if there is an error count change - UnexpectedReply" do
+            @task.properties.modbus_rtu_statistics_period = Time.at(999)
+            @task.properties.modbus_error_count_threshold = 10
+            modbus_expect_during_configuration_and_start.to do
+                emit task.start_event
+            end
+
+            request = expect_execution.to_have_one_new_sample(@reader)
+
+            sample = modbus_expect_execution(@writer, @reader) do
+                # The read response differs from the read requests on the methods
+                # called on update hook, so we can just write the request to avoid
+                # calculating the CRC all over again
+                @writer.write(request)
+            end.to_have_one_new_sample(task.modbus_rtu_statistics_port)
+
+            assert_equal(0, sample.total_crc_error_count)
+            assert_equal(1, sample.total_unexpected_reply_error_count)
+        end
+
+        it "sends a rtu statistic if there is an error count change - CRC" do
+            @task.properties.modbus_rtu_statistics_period = Time.at(999)
+            @task.properties.modbus_error_count_threshold = 10
+            modbus_expect_during_configuration_and_start.to do
+                emit task.start_event
+            end
+
+            request = expect_execution.to_have_one_new_sample(@reader)
+            reply = modbus_reply(request)
+            # Modify the reply to add the error when validating CRC
+            reply.data[5] += 1
+
+            sample = modbus_expect_execution(@writer, @reader) do
+                @writer.write(reply)
+            end.to_have_one_new_sample(task.modbus_rtu_statistics_port)
+
+            assert_equal(1, sample.total_crc_error_count)
+            assert_equal(0, sample.total_unexpected_reply_error_count)
+        end
+
+        it "detects an error if an extra 0 is sent after CRC" do
+            @task.properties.modbus_rtu_statistics_period = Time.at(999)
+            @task.properties.modbus_error_count_threshold = 10
+            modbus_expect_during_configuration_and_start.to do
+                emit task.start_event
+            end
+
+            request = expect_execution.to_have_one_new_sample(@reader)
+            reply = modbus_reply(request)
+            # Modify the reply to add the extra 0
+            reply.data << 0
+
+            sample = modbus_expect_execution(@writer, @reader) do
+                @writer.write(reply)
+            end.to_have_one_new_sample(task.modbus_rtu_statistics_port)
+
+            assert(task.running?)
+            assert_equal(0, sample.total_crc_error_count)
+            assert_equal(1, sample.total_unexpected_reply_error_count)
+        end
+
+        it "updates the deadline for rtu stats after an error has been detected" do
+            @task.properties.modbus_rtu_statistics_period = Time.at(1)
+            @task.properties.modbus_error_count_threshold = 10
+            modbus_expect_during_configuration_and_start.to do
+                emit task.start_event
+            end
+
+            request = expect_execution.to_have_one_new_sample(@reader)
+            reply = modbus_reply(request)
+            # Modify the reply to add an error
+            reply.data[5] += 1
+
+            toc = Time.now
+            modbus_expect_execution(@writer, @reader) do
+                @writer.write(reply)
+            end.to_have_one_new_sample(task.modbus_rtu_statistics_port)
+
+            modbus_expect_execution(@writer, @reader).to do
+                have_one_new_sample task.modbus_rtu_statistics_port
+            end
+            tic = Time.now
+
+            assert_includes (0.7..1.3), tic - toc
+        end
+    end
+
     def default_deployed_model
         OroGen.motors_weg_cvw300.Task
               .deployed_as("motors_weg_cvw300_test")
@@ -624,6 +741,8 @@ describe OroGen.motors_weg_cvw300.Task do
 
         @task.properties.io_read_timeout = Time.at(2)
         @task.properties.modbus_interframe_delay = Time.at(0.01)
+        @task.properties.modbus_rtu_statistics_period = Time.at(1)
+        @task.properties.modbus_error_count_threshold = 1
         @task.properties.watchdog do |sw|
             sw.timeout = Time.at(0.5)
             sw

@@ -37,6 +37,9 @@ namespace motors_weg_cvw300 {
         base::Time m_last_temperature_update;
         base::Time m_cmd_timeout;
         base::Time m_cmd_deadline;
+        base::Time m_modbus_rtu_statistics_period;
+        base::Time m_modbus_rtu_statistics_deadline;
+        modbus::RTUStatistics m_modbus_rtu_statistics;
 
         std::unique_ptr<Driver> m_driver;
 
@@ -50,6 +53,28 @@ namespace motors_weg_cvw300 {
         void evaluateInverterStatus(InverterStatus const& inverter_status);
         CurrentState readAndPublishControllerStates();
 
+        /** Signalizes that the RTUStatistics must be updated and published */
+        bool errorCountersUpdated(modbus::RTUStatistics const& new_status);
+
+        /** Signalizes that the RTUStatistics update period has been reached
+         *  and it must be published */
+        bool rtuStatisticsDeadlineReached();
+
+        /** Publish RTU Statistics under certain constraints to avoid flooding the logs
+         *
+         *  It also updates the deadline and the stored RTUStatistics values.
+         *  It's meant to be used on the UpdateHook only.
+        */
+        void publishUpdatedRTUStatistics();
+
+        /** Immediately publishes RTU Statistics and updates deadline
+         *
+         *  This is meant to be used on StartHook, StopHook and ErrorHook
+         *  providing the newest and first/last sample from the task.
+         *  It also updates the stored statistics variable and deadline
+         *  so we can use it on StartHook to initialize the values.
+         */
+        void publishRTUStatistics();
     public:
         /** TaskContext constructor for Task
          * \param name Name of the task. This name needs to be unique to make it

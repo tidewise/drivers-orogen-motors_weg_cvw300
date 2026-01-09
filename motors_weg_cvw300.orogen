@@ -7,6 +7,9 @@ cxx_standard "c++17"
 import_types_from "std"
 import_types_from "base"
 
+using_library "modbus"
+import_types_from "modbus/RTUStatistics.hpp"
+
 using_library "motors_weg_cvw300"
 import_types_from "motors_weg_cvw300/Configuration.hpp"
 import_types_from "motors_weg_cvw300/InverterTemperatures.hpp"
@@ -58,6 +61,26 @@ task_context "Task", subclasses: "iodrivers_base::Task" do
     # setup (and know what you are doing)
     property "modbus_interframe_delay", "/base/Time"
 
+    # Modbus error threshold
+    #
+    # The default value is 1, therefore it retains the previous behavior
+    # of breaking once a CRC or Reply error is detected.
+    property "modbus_error_count_threshold", "uint8_t", 1
+
+    # Modbus error count increment
+    #
+    # The increment applied to the error counter after each error.
+    # This avoids alternating errors (ERROR, SUCESS, ERROR, SUCESS...) by
+    # by being more sensible to errors since a sucess will always decreaser
+    # the error count by 1 until 0 and it cannot be modified.
+    property "modbus_error_count_increment", "uint8_t", 1
+
+    # Modbus RTU Statistics output period
+    #
+    # The period of update for the modbus rtu statistics port if
+    # no increment on the error counter was detected. Default: 10 seconds
+    property "modbus_rtu_statistics_period", "/base/Time"
+
     # Control limits
     #
     # You may only set the speed and effort fields. Setting any other field
@@ -95,6 +118,13 @@ task_context "Task", subclasses: "iodrivers_base::Task" do
     output_port "fault_state", "/motors_weg_cvw300/FaultState"
 
     output_port "saturation_signal", "/control_base/SaturationSignal"
+
+    # RTU Statistics
+    #
+    # Reports the RTU Statistics on a fixed interval unless a change
+    # on an error counter has been detected, in this case it outputs
+    # immediately
+    output_port "modbus_rtu_statistics", "/modbus/RTUStatistics"
 
     exception_states "INVALID_COMMAND_SIZE", "INVALID_COMMAND_PARAMETER"
     error_states "CONTROLLER_FAULT", "CONTROLLER_UNDER_VOLTAGE"
